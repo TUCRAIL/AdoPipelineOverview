@@ -1,0 +1,115 @@
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% {  transform: rotate(359deg); }
+}
+.spinner {
+    animation: spin 6s linear infinite;
+    mask-size: cover;
+    text-align: center;
+    box-sizing: inherit;
+    flex-shrink: 0;
+    align-self: center;
+    fill: currentColor;
+    margin: 10px;
+    color: rgba(0, 120, 212, 1);
+}
+
+.queued {
+    text-align: center;
+    box-sizing: inherit;
+    flex-shrink: 0;
+    align-self: center;
+    fill: currentColor;
+    margin: 10px;
+    color: rgba(102, 102, 102, 1);
+}
+
+.success {
+    text-align: center;
+      box-sizing: inherit;
+      flex-shrink: 0;
+      align-self: center;
+      fill: currentColor;
+      margin: 10px;
+      color: rgba(85, 163, 98, 1);
+}
+
+.failed {
+text-align: center;
+box-sizing: inherit;
+flex-shrink: 0;
+align-self: center;
+fill: currentColor;
+margin: 10px;
+color: rgba(205, 74, 69, 1);
+}
+
+.waiting {
+    text-align: center;
+    box-sizing: inherit;
+    flex-shrink: 0;
+    align-self: center;
+    fill: currentColor;
+    margin: 10px;
+    color: rgba(0, 120, 212, 1);
+}
+
+.info {
+    text-align: center;
+    box-sizing: inherit;
+    flex-shrink: 0;
+    align-self: center;
+    fill: currentColor;
+    margin: 10px;
+    color: rgba(0, 120, 212, 1);
+    transform: rotate(180deg);
+}
+
+.skip {
+    text-align: center;
+    box-sizing: inherit;
+    flex-shrink: 0;
+    align-self: center;
+    fill: currentColor;
+    margin: 10px;
+    color: rgba(102, 102, 102, 1);
+}
+
+.cancel {
+    text-align: center;
+    box-sizing: inherit;
+    flex-shrink: 0;
+    align-self: center;
+    fill: currentColor;
+    margin: 10px;
+    color: rgba(102, 102, 102, 1);
+}
+
+.stage {
+    font-family: "Segoe UI VSS (Regular)","Segoe UI","-apple-system",BlinkMacSystemFont,Roboto,"Helvetica Neue",Helvetica,Ubuntu,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+    font-size: 12px;
+    cursor: default;
+    border-collapse: separate;
+    border-spacing: 0px;
+    -webkit-box-sizing: border-box;
+    margin: 2px;
+    text-align: center;
+    vertical-align: middle;
+    width: auto;
+}
+
+.stage-success {
+    border-bottom: 2px solid rgba(85,163,98,1);
+}
+
+.stage-neutral {
+    border-bottom: 2px solid rgba(102,102,102,1);
+}
+
+.stage-failed {
+    border-bottom: 2px solid rgba(205,74,69,1);
+}
+
+.stage-active {
+    border-bottom: 2px solid rgba(0,120,212,1);
+}

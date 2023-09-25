@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>          
+        <link rel="stylesheet" href="widget.css">
+
+    </head>
+    <body>
+        <div class="widget">
+            <div id="widget-container">
+
+                <h2 class="title">
+                    <div class="inner-title">Widget title</div>
+                    <div class="subtitle">Widget subtitle</div>
+                </h2>
+                
+                <div class="content">
+                    <div>
+                        <label class="label">Filter by tag: </label>
+                        <select id="build-tag-dropdown"  class="dropdown" style="margin-top:10px">
+                            <option value="all" selected>all</option>
+                        </select>
+                    </div>
+                    <div id="build-container">
+
+                    </div> 
+                </div>
+
+            </div>
+        </div>
+        <script src="sdk/scripts/VSS.SDK.min.js"></script>
+        <script src="scripts/widget.js"></script>
+    </body>
+</html>
