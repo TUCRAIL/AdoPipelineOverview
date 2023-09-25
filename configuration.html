@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+</head>
+<body>
+<div class="widget-configuration">
+    <fieldset>
+        <label class="label">Build pipeline: </label>
+        <select id="build-dropdown" class="dropdown" style="margin-top:10px">
+            <option value="" selected disabled hidden>Please select a query</option>
+        </select>
+    </fieldset>
+    <fieldset>
+        <label class="label">Branch: </label>
+        <select disabled="true" id="branch-dropdown" class="dropdown" style="margin-top:10px">
+            <option value="" selected disabled hidden>Please select a query</option>
+        </select>
+    </fieldset>
+    <fieldset>
+        <label class="label">Build count: </label>
+        <select id="build-count-dropdown" class="dropdown" style="margin-top:10px">
+            <option value="5" selected>5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+        </select>
+    </fieldset>
+    <fieldset>
+        <label class="label">Default tag</label>
+        <select id="build-default-tag-dropdown" class="dropdown" style="margin-top:10px">
+            <option value="all" selected>all</option>
+        </select>
+    </fieldset>
+</div>
+<script src="sdk/scripts/VSS.SDK.min.js"></script>
+<script src="scripts/configuration.js"></script>
+</body>
+</html>

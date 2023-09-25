@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "vss-web-extension-sdk": "^5.141.0"
+  },
+  "devDependencies": {
+    "webpack-cli": "^5.1.4"
+  }
+}
