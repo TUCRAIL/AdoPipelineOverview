@@ -23,8 +23,8 @@
         "your-publisher-id.vsts-extensions-myExtensions.DeploymentsWidget.Configuration"
       ],
       "properties": {
-        "name": "Branch table widget",
-        "description": "Widget containing the various builds for the branch",
+        "name": "Pipeline overview",
+        "description": "Widget displaying the various builds for your branch and tag",
         "catalogIconUrl": "img/your-logo.png",
         "previewImageUrl": "img/your-logo.png",
         "isNameConfigurable": false,
