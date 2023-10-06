@@ -292,7 +292,7 @@ function BuildRowStagesElements(stages){
         let container = document.createElement('div');
 
         let badgeElement = document.createElement('template');
-        badgeElement.innerHTML = GetStageBadge(stage.state,stage.result, stage.startTime, previousState);
+        badgeElement.innerHTML = GetStageBadge(stage.state,stage.result, stage.startTime, previousState, stages.length > 1);
 
         let stageState = GetStageUnderline(badgeElement.innerHTML);
         container.setAttribute('class', `stage ${stageState}`);
@@ -337,9 +337,10 @@ function GetStageUnderline(svg)
  * @param {string} result - A stage result
  * @param {Date} startTime - The date when the stage started to run
  * @param {string} previousState - The previous stage state
+ * @param {boolean} isMultistage - Whether the pipeline has multiple stages
  * @return {string}
  */
-function GetStageBadge(state, result, startTime, previousState)
+function GetStageBadge(state, result, startTime, previousState, isMultistage)
 {
     if(state === "completed")
     {
@@ -359,7 +360,7 @@ function GetStageBadge(state, result, startTime, previousState)
 
         switch(state){
             case 'pending':
-                if(typeof previousState === "undefined" ||(typeof previousState !== "undefined" && previousState !== "completed"))
+                if((typeof previousState === "undefined" && isMultistage) ||(typeof previousState !== "undefined" && previousState !== "completed"))
                 {
                     alreadyPending = true;
                     return svgWaitingToStart;
@@ -368,6 +369,10 @@ function GetStageBadge(state, result, startTime, previousState)
             case 'inprogress':
                 // If the startTime is null, it means that the stage is waiting in a queue due to not enough workers being present
                 // Or needing a gate approval
+                if(startTime === null || typeof startTime === "undefined")
+                {
+                    return svgWaiting;
+                }
                 let date = Date.parse(startTime.toString()) || 0;
                 if(date !== 0)
                 {
