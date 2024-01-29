@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
+    <style>
+        .input{
+            display: inline-block;
+            position: relative;
+            width: 100%;
+            border:  1px solid;
+            border-color: rgba( 234, 234, 234 ,  1 );
+            border-color: rgba( var(--palette-neutral-8,234, 234, 234) ,  1 );
+            padding: 1px 0;
+        }
+    </style>
 </head>
 <body>
 <div class="widget-configuration">
@@ -18,19 +29,19 @@
     </fieldset>
     <fieldset>
         <label class="label">Build count: </label>
-        <select id="build-count-dropdown" class="dropdown" style="margin-top:10px">
-            <option value="5" selected>5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-            <option value="10">10</option>
-        </select>
+        <input type="number" min="1" max="50" id="build-count" class="input" style="margin-top:10px">
     </fieldset>
     <fieldset>
         <label class="label">Default tag</label>
         <select id="build-default-tag-dropdown" class="dropdown" style="margin-top:10px">
             <option value="all" selected>all</option>
+        </select>
+    </fieldset>
+    <fieldset>
+        <label class="label">Show stages:</label>
+        <select id="show-stages" class="dropdown" style="margin-top:10px">
+            <option value="true" selected>Yes</option>
+            <option value="false">No</option>
         </select>
     </fieldset>
 </div>

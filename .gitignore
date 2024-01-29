@@ -1,2 +1,3 @@
 /node_modules/
 /sdk/node_modules/
+*.vsix

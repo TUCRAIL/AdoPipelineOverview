@@ -18,8 +18,14 @@ const getStageResult = {
     5: 'abandoned'
 };
 
-//Object to recover the stage state as a string
+//Object to recover the build result as a string
+const getBuildResult = {
+    2: "succeeded",
+    8: "failed",
+    32: "canceled",
+  };
 
+//Object to recover the stage state as a string
 const getStageState = {
     0: 'pending',
     1: 'inprogress',
@@ -67,6 +73,7 @@ VSS.init({
 let settingBuildDefinition;
 let settingBuildBranch;
 let defaultTagDropdown;
+let showStages;
 
 /**
  * @description Validates the settings and prompt the user to configure the widget if they are invalid or no longer valid
@@ -110,6 +117,7 @@ async function GetBuildWidget(widgetSettings){
 
         settingBuildDefinition = settings.buildDefinition;
         settingBuildBranch = settings.buildBranch;
+        showStages = settings.showStages == "true";
 
         console.log("Starting to build UI")
         await GetBuilds(settings.buildDefinition, settings.buildBranch);
@@ -142,33 +150,28 @@ async function GetBuilds(buildDefinition, buildBranch)
     let tags = buildTag === 'all' ? null : [buildTag]
     //Retrieve all the builds in a build definition (pipeline)
     console.log(`Parameters that will be passed to the api call are: \n
-     projectid:${projectId} \n
-     buildDefinition: ${buildDefinition} \n
-     tag: ${buildTag}`)
-//    let builds = await timelineClient.getBuilds(projectId, buildDefinitions);
+        projectid:${projectId} \n
+        buildDefinition: ${buildDefinition} \n
+        tag: ${tags} \n
+        branch: ${buildBranch}`);
+    
     /**
      * @type Build[]
      */
     let builds = await timelineClient.getBuilds(projectId, buildDefinitions,null, null, null, null, null, null, null, null, tags, null, null, null, null, null, null, buildBranch, null, null, null);
 
-
     // Descending sort of the build ids and retrieve only builds for the wanted branch
     // Filtering on the branch is deprecated as it is now done in the getBuilds function
     builds = builds.sort(function(a, b) {
         return b.id - a.id;
-    }).filter(function(build) {
-        if(build.sourceBranch === buildBranch)
-        {
-            return build;
-        }
     });
+
     console.log(`Taking at most ${buildsToTake} of available ${builds.length} for display`);
     //Reduce array size if bigger than number of builds wanted
     if(builds.length > buildsToTake)
     {
         builds = builds.slice(0, buildsToTake);
     }
-
 
     console.log("Starting to build html table")
     //Creating html table
@@ -179,33 +182,43 @@ async function GetBuilds(buildDefinition, buildBranch)
     {
         console.log(`Building row number ${i}`);
         alreadyPending = false;
-        //Get the timeline for a specific build run
-        let timeline = await timelineClient.getBuildTimeline(projectId, builds[i].id);
-        if(typeof timeline === "undefined")
-        {
-            console.log("Could not build a valid row");
-            let tableRow = document.createElement('tr');
-            tableRow.appendChild(BuildRowNameElement(builds[i]._links.web.href, builds[i].buildNumber));
-            let tableErrorCell = document.createElement('td');
-            tableErrorCell.setAttribute('colspan', (99).toString());
-            tableErrorCell.textContent = "There was an error preventing the pipeline to run (invalid YAML, service connection not existing ...)";
-            tableRow.appendChild(tableErrorCell);
-            table.appendChild(tableRow);
+        if (showStages == true) {
+            //Get the timeline for a specific build run
+            let timeline = await timelineClient.getBuildTimeline(projectId, builds[i].id);
+            if(typeof timeline === "undefined")
+            {
+                console.log("Could not build a valid row");
+                let tableRow = document.createElement('tr');
+                tableRow.appendChild(BuildRowNameElement(builds[i]._links.web.href, builds[i].buildNumber));
+                let tableErrorCell = document.createElement('td');
+                tableErrorCell.setAttribute('colspan', (99).toString());
+                tableErrorCell.textContent = "There was an error preventing the pipeline to run (invalid YAML, service connection not existing ...)";
+                tableRow.appendChild(tableErrorCell);
+                table.appendChild(tableRow);
+            }
+            else {
+                let stageArray = [];
+                //Sort stages by their order to append elements in the correct order
+                timeline.records.filter(FilterTimelineByStage).sort(function(a,b){
+                    return a.order - b.order;
+                }).forEach(record => { //Create an object from the records
+                    let stage = new Stage(record);
+                    stageArray.push(stage);
+                });
+                console.log(`Starting to builds columns for the ${stageArray.length} build stages`);
+                //Build row using our arrays
+                table.appendChild(BuildHtmlRow(stageArray, builds[i]._links.web.href, builds[i].buildNumber));
+            }
         }
         else {
-            let stageArray = [];
-            //Sort stages by their order to append elements in the correct order
-            timeline.records.filter(FilterTimelineByStage).sort(function(a,b){
-                return a.order - b.order;
-            }).forEach(record => { //Create an object from the records
-                let stage = new Stage(record);
-                stageArray.push(stage);
-            });
-            console.log(`Starting to builds columns for the ${stageArray.length} build stages`);
-            //Build row using our arrays
-            table.appendChild(BuildHtmlRow(stageArray, builds[i]._links.web.href, builds[i].buildNumber));
+            table.appendChild(
+                BuildHtmlRowNoStages(
+                  getBuildResult[builds[i].result],
+                  builds[i]._links.web.href,
+                  builds[i].buildNumber
+                )
+              );
         }
-
     }
 
     let buildContainer = document.getElementById('build-container');
@@ -256,6 +269,25 @@ function BuildHtmlRow(stages, buildUrl, buildBuildNumber)
     console.log("Row successfully built");
     return rowElement;
 }
+
+/**
+ * @param {string} buildStatus - status of the build
+ * @param {string} buildUrl - Url of the build viewable in a browser
+ * @param {string} buildNumber - id of the build. YYYY.MM.DD by default
+ * @description - Create a row containing a link to the build and the status
+ * @return {HTMLTableRowElement}
+ */
+function BuildHtmlRowNoStages(buildStatus, buildUrl, buildNumber) {
+    let rowElement = document.createElement("tr");
+    rowElement.setAttribute("class", "row");
+
+    let tdElement = BuildRowElementNoStage(buildStatus, buildNumber, buildUrl);
+    rowElement.appendChild(tdElement);
+
+    console.log("Row successfully built");
+  
+    return rowElement;
+  }
 
 /**
  * @param {string} url - Url of the build viewable in a browser
@@ -310,6 +342,37 @@ function BuildRowStagesElements(stages){
 }
 
 /**
+ * @description Creates cell for the build
+ * @param {string} buildStatus - The status of the build
+ * @param {string} buildName - The name of the build
+ * @param {string} buildUrl - Url of the build viewable in a browser
+ * @return {HTMLTableCellElement}
+ */
+function BuildRowElementNoStage(buildStatus, buildName, buildUrl) {
+    let tdElement = document.createElement("td");
+    let buildLinkContainer = document.createElement("a");
+    buildLinkContainer.href = buildUrl;
+    buildLinkContainer.target = "_blank";
+    tdElement.appendChild(buildLinkContainer);
+    
+    
+    let container = document.createElement("div");
+  
+    let badgeElement = document.createElement("template");
+    badgeElement.innerHTML = GetBadgeSvg(buildStatus);
+  
+    let buildState = GetStageUnderline(badgeElement.innerHTML);
+    container.setAttribute("class", `stage ${buildState}`);
+  
+    container.replaceChildren(badgeElement.content.firstChild);
+  
+    container.append(buildName);
+    buildLinkContainer.appendChild(container);
+  
+    return tdElement;
+  }
+
+/**
  * @description Get the colour of the underline of the stage name
  * @param {string} svg - The html corresponding to the svg displayed on the stage
  * @return {string} - The class corresponding to the underline that should be displayed
@@ -344,20 +407,9 @@ function GetStageBadge(state, result, startTime, previousState, isMultistage)
 {
     if(state === "completed")
     {
-
-
-        switch(result){
-            case 'succeeded': return svgSuccess;
-            case 'succeededwithissues': return svgInfo;
-            case 'failed': return svgFailed;
-            case 'canceled': return svgCancel;
-            case 'skipped': return svgSkip;
-            case 'abandoned': return svgCancel;
-        }
+        return GetBadgeSvg(result);
     }
     else {
-
-
         switch(state){
             case 'pending':
                 if((typeof previousState === "undefined" && isMultistage) ||(typeof previousState !== "undefined" && previousState !== "completed"))
@@ -384,6 +436,30 @@ function GetStageBadge(state, result, startTime, previousState, isMultistage)
 }
 
 /**
+ * @description Get the status badge of the build based on its result
+ * @param {string} result - A build result
+ * @return {string}
+ */
+function GetBadgeSvg(result) {
+    switch (result) {
+      case "succeeded":
+        return svgSuccess;
+      case "succeededwithissues":
+        return svgInfo;
+      case "failed":
+        return svgFailed;
+      case "canceled":
+        return svgCancel;
+      case "skipped":
+        return svgSkip;
+      case "abandoned":
+        return svgCancel;
+      case undefined:
+        return svgInProgress;
+    }
+}
+
+/**
  *@description Create the HTML elements prepending the build container based on the settings
  * @param widgetSettings object?
  * @returns {Promise<void>}
@@ -405,14 +481,14 @@ async function buildWidgetHeader(widgetSettings)
                     defaultTagDropdown.append(newOption);
                 });
             }
-            if(tags === [] || !tags.includes(settingsTag))
+            if(tags == [] || !tags.includes(settingsTag))
             {
                 console.log(`The selected tag ${settingsTag} is no longer present in the pipelines. \n
             Reverting to default "all" tags"`)
                 defaultTagDropdown.value = 'all'
             }
             else {
-                console.log(`Setting current tag filer to ${settingsTag}`)
+                console.log(`Setting current tag filter to ${settingsTag}`)
                 defaultTagDropdown.value = settingsTag;
             }
         });
@@ -422,14 +498,14 @@ async function buildWidgetHeader(widgetSettings)
         const opts = document.querySelectorAll("select option");
         let tags = [...opts]
             .map(el => el.value);
-        if(tags === [] || !tags.includes(settingsTag))
+        if(tags == [] || !tags.includes(settingsTag))
         {
             console.log(`The selected tag ${settingsTag} is no longer present in the pipelines. \n
                     Reverting to default "all" tags"`)
             defaultTagDropdown.value = 'all'
         }
         else {
-            console.log(`Setting current tag filer to ${settingsTag}`)
+            console.log(`Setting current tag filter to ${settingsTag}`)
             defaultTagDropdown.value = settingsTag;
         }
     }
@@ -449,35 +525,36 @@ function (WidgetHelpers, TFS_Build_webApi) {
     VSS.register("DeploymentsWidget", async function () {
         console.log("Preparing setup for the widget data");
         projectId = VSS.getWebContext().project.id;
-        let buildClient = TFS_Build_webApi.getClient();
+        timelineClient = TFS_Build_webApi.getClient();
         defaultTagDropdown =  document.getElementById("build-tag-dropdown");
         
-        timelineClient = buildClient;
-
-
-
-
         return {
             //Triggered when entering the dashboard
             load: async function (widgetSettings) {
-                console.log("Loading widget data");
-                await  buildWidgetHeader(widgetSettings);
-                await GetBuildWidget(widgetSettings);
-                return WidgetHelpers.WidgetStatusHelper.Success();
+                try {
+                    console.log("Loading widget data");
+                    await  buildWidgetHeader(widgetSettings);
+                    await GetBuildWidget(widgetSettings);
+                    return WidgetHelpers.WidgetStatusHelper.Success();
+                } catch (error) {
+                    console.log(`Hit an error while loading: ${error}`);
+                }
             },
             // Triggered when clicking "reload" or changing branch in the configuration
             reload: async function(widgetSettings) {
-                console.log("Updating widget data");
-                reloading = true;
-                await buildWidgetHeader(widgetSettings);
-                reloading = false;
-                await GetBuildWidget(widgetSettings);
-                return WidgetHelpers.WidgetStatusHelper.Success();
+                try {
+                    console.log("Updating widget data");
+                    reloading = true;
+                    await buildWidgetHeader(widgetSettings);
+                    reloading = false;
+                    await GetBuildWidget(widgetSettings);
+                    return WidgetHelpers.WidgetStatusHelper.Success();
+                } catch (error) {
+                    console.log(`Hit an error while loading: ${error}`);
+                }
             }
-
         }
     });
     console.log("The widget was successfully loaded");
     VSS.notifyLoadSucceeded();
 });
-
