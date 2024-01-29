@@ -31,6 +31,10 @@
         "uri": "widget.html",
         "supportedSizes": [
           {
+            "rowSpan": 1,
+            "columnSpan": 2
+          },
+          {
             "rowSpan": 2,
             "columnSpan": 3
           },
