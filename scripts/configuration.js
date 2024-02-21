@@ -7,9 +7,10 @@ let projectId = "";
 
 let buildDropdown = document.getElementById("build-dropdown");
 let branchDropdown = document.getElementById("branch-dropdown");
-let buildCountDropdown = document.getElementById("build-count-dropdown");
+let buildCountInput = document.getElementById("build-count");
 let defaultTagDropdown = document.getElementById("build-default-tag-dropdown")
 let defaultBranchDropdownOptions = '<option value="" selected disabled hidden>Please select a query</option>';
+let showStagesDropdown = document.getElementById("show-stages");
 
 /**
  * @description Add definition names to the build definition dropdown
@@ -134,8 +135,9 @@ function onBranchDropdownChange(WidgetHelpers, widgetConfigurationContext, defin
             buildDefinition: buildDropdown.value,
             buildBranch: branchDropdown.value,
             definitionName: definition.name,
-            buildCount: buildCountDropdown.value,
-            defaultTag: defaultTagDropdown.value
+            buildCount: buildCountInput.value,
+            defaultTag: defaultTagDropdown.value,
+            showStages: showStagesDropdown.value,
         })
     };
     let eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
@@ -143,7 +145,7 @@ function onBranchDropdownChange(WidgetHelpers, widgetConfigurationContext, defin
     widgetConfigurationContext.notify(eventName, eventArgs);
 }
 
-function onBuildCountDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions) {
+function onBuildCountInputChange(WidgetHelpers, widgetConfigurationContext, definitions) {
     if (branchDropdown.value !== "" && buildDropdown.value != "") {
         let definition = definitions.filter(definition => definition.id == buildDropdown.value)[0];
         console.log(`Selected to display ${buildDropdown.value} for branch ${branchDropdown.value} and definition ${definition.name}`);
@@ -152,8 +154,9 @@ function onBuildCountDropdownChange(WidgetHelpers, widgetConfigurationContext, d
                 buildDefinition: buildDropdown.value,
                 buildBranch: branchDropdown.value,
                 definitionName: definition.name,
-                buildCount: buildCountDropdown.value,
-                defaultTag: defaultTagDropdown.value
+                buildCount: buildCountInput.value,
+                defaultTag: defaultTagDropdown.value,
+                showStages: showStagesDropdown.value,
             })
         };
         let eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
@@ -171,14 +174,33 @@ function onDefaultTagDropdownChange(WidgetHelpers, widgetConfigurationContext, d
                 buildDefinition: buildDropdown.value,
                 buildBranch: branchDropdown.value,
                 definitionName: definition.name,
-                buildCount: buildCountDropdown.value,
-                defaultTag: defaultTagDropdown.value
+                buildCount: buildCountInput.value,
+                defaultTag: defaultTagDropdown.value,
+                showStages: showStagesDropdown.value,
             })
         };
         let eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
         let eventArgs = WidgetHelpers.WidgetEvent.Args(customSettings);
         widgetConfigurationContext.notify(eventName, eventArgs);
     }
+}
+
+function onShowStagesDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions) {
+  let definition = definitions.filter((definition) => definition.id == buildDropdown.value)[0];
+  let customSettings = {
+    data: JSON.stringify({
+      buildDefinition: buildDropdown.value,
+      buildBranch: branchDropdown.value,
+      definitionName: definition.name,
+      buildCount: buildCountInput.value,
+      defaultTag: defaultTagDropdown.value,
+      showStages: showStagesDropdown.value,
+    }),
+  };
+  
+  let eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
+  let eventArgs = WidgetHelpers.WidgetEvent.Args(customSettings);
+  widgetConfigurationContext.notify(eventName, eventArgs);
 }
 
 /**
@@ -202,8 +224,9 @@ function saveSettings(WidgetHelpers, definitions)
             buildDefinition: buildDropdown.value,
             buildBranch: branchDropdown.value,
             definitionName: definition.name,
-            buildCount: buildCountDropdown.value,
-            defaultTag: defaultTagDropdown.value
+            buildCount: buildCountInput.value,
+            defaultTag: defaultTagDropdown.value,
+            showStages: showStagesDropdown.value,
         })
     };
 
@@ -254,7 +277,7 @@ VSS.require(["TFS/Dashboards/WidgetHelpers", "VSS/Service", "TFS/Build/RestClien
                         console.log(`Settings have been found and validated. Current settings are: 
                             ${JSON.stringify(settings)}`);
                         buildDropdown.value = settings.buildDefinition;
-                        buildCountDropdown.value = settings.buildCount;
+                        buildCountInput.value = settings.buildCount;
                         let buildDefinition = settings.buildDefinition;
 
 
@@ -271,6 +294,9 @@ VSS.require(["TFS/Dashboards/WidgetHelpers", "VSS/Service", "TFS/Build/RestClien
                     else {
                         console.log("Settings are either not present or valid. This will be a first setup for the configuration.");
                     }
+                    if (settings.showStages != true) {
+                      showStagesDropdown.value = "false";
+                    }
                     //Create a json object and pass it as widget settings
                     buildDropdown.onchange = async function () {
                         await onBuildDropdownChange(definitions, codeClient);
@@ -278,14 +304,17 @@ VSS.require(["TFS/Dashboards/WidgetHelpers", "VSS/Service", "TFS/Build/RestClien
                     branchDropdown.onchange = function()
                     {
                         onBranchDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions);
-                    }
-                    buildCountDropdown.onchange = function () {
-                        onBuildCountDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions);
-                    }
+                    };
+                    buildCountInput.onchange = function () {
+                        onBuildCountInputChange(WidgetHelpers, widgetConfigurationContext, definitions);
+                    };
 
                     defaultTagDropdown.onchange = function () {
                         onDefaultTagDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions);
-                    }
+                    };
+                    showStagesDropdown.onchange = function () {
+                      onShowStagesDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions);
+                    };
 
                     return WidgetHelpers.WidgetStatusHelper.Success();
                 },
