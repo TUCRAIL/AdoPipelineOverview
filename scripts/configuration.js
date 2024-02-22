@@ -278,8 +278,9 @@ VSS.require(["TFS/Dashboards/WidgetHelpers", "VSS/Service", "TFS/Build/RestClien
                             ${JSON.stringify(settings)}`);
                         buildDropdown.value = settings.buildDefinition;
                         buildCountInput.value = settings.buildCount;
-                        let buildDefinition = settings.buildDefinition;
+                        showStagesDropdown.value = settings.showStages;
 
+                        let buildDefinition = settings.buildDefinition;
 
                         /**
                          * @type BuildDefinition
@@ -294,9 +295,7 @@ VSS.require(["TFS/Dashboards/WidgetHelpers", "VSS/Service", "TFS/Build/RestClien
                     else {
                         console.log("Settings are either not present or valid. This will be a first setup for the configuration.");
                     }
-                    if (settings.showStages != true) {
-                      showStagesDropdown.value = "false";
-                    }
+
                     //Create a json object and pass it as widget settings
                     buildDropdown.onchange = async function () {
                         await onBuildDropdownChange(definitions, codeClient);
