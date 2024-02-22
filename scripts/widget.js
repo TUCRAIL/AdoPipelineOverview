@@ -148,17 +148,18 @@ async function GetBuilds(buildDefinition, buildBranch)
     console.debug("Starting process to retrieve builds")
     let buildDefinitions = [buildDefinition]
     let tags = buildTag === 'all' ? null : [buildTag]
+    let branches = buildBranch === 'all' ? null : [buildBranch]
     //Retrieve all the builds in a build definition (pipeline)
     console.debug(`Parameters that will be passed to the api call are: \n
         projectid:${projectId} \n
         buildDefinition: ${buildDefinition} \n
         tag: ${tags} \n
-        branch: ${buildBranch}`);
+        branch: ${branches}`);
     
     /**
      * @type Build[]
      */
-    let builds = await timelineClient.getBuilds(projectId, buildDefinitions,null, null, null, null, null, null, null, null, tags, null, null, null, null, null, null, buildBranch, null, null, null);
+    let builds = await timelineClient.getBuilds(projectId, buildDefinitions,null, null, null, null, null, null, null, null, tags, null, null, null, null, null, null, branches, null, null, null);
 
     // Descending sort of the build ids and retrieve only builds for the wanted branch
     // Filtering on the branch is deprecated as it is now done in the getBuilds function
