@@ -82,31 +82,31 @@ let showStages;
  * @constructor
  */
 async function GetBuildWidget(widgetSettings){
-    console.log("Starting validation of the settings");
+    console.debug("Starting validation of the settings");
     //Retrieve settings from configuration
     let settings = JSON.parse(widgetSettings.customSettings.data);
-    console.log("Verifying settings");
+    console.debug("Verifying settings");
 
-    console.log(`settings are: 
+    console.debug(`settings are: 
         ${JSON.stringify(settings)}`);
     //If the necessary settings aren't there => configuration must be done / modified
     if (!settings || !settings.buildDefinition || !settings.buildBranch) {
-        console.log("Missing settings for the widget");
+        console.debug("Missing settings for the widget");
         let buildContainer = document.getElementById('build-container');
         buildContainer.innerHTML = '<p>Sorry nothing to show, please configure the widget.</p>';
 
     }
     else{
-        console.log("All settings are set for the widget");
+        console.debug("All settings are set for the widget");
         //Replace default value if setting is set
         if(settings.buildCount)
         {
-            console.log(`Builds to display set at ${settings.buildCount}`)
+            console.debug(`Builds to display set at ${settings.buildCount}`)
             buildsToTake = settings.buildCount;
         }
         if(settings.defaultTag)
         {
-            console.log(`Default filter tag set at ${settings.defaultTag}`)
+            console.debug(`Default filter tag set at ${settings.defaultTag}`)
             buildTag = settings.defaultTag;
         }
         //Set title as definition name and subtitle as branch name
@@ -119,7 +119,7 @@ async function GetBuildWidget(widgetSettings){
         settingBuildBranch = settings.buildBranch;
         showStages = settings.showStages == "true";
 
-        console.log("Starting to build UI")
+        console.debug("Starting to build UI")
         await GetBuilds(settings.buildDefinition, settings.buildBranch);
 
     }
@@ -132,7 +132,7 @@ async function GetBuildWidget(widgetSettings){
  */
 async function ResetUI()
 {
-    console.log("Restart process of building the UI container");
+    console.debug("Restart process of building the UI container");
     let buildContainer = document.getElementById('build-container');
     buildContainer.replaceChildren();
     await GetBuilds(settingBuildDefinition, settingBuildBranch)
@@ -145,11 +145,11 @@ async function ResetUI()
  */
 async function GetBuilds(buildDefinition, buildBranch)
 {
-    console.log("Starting process to retrieve builds")
+    console.debug("Starting process to retrieve builds")
     let buildDefinitions = [buildDefinition]
     let tags = buildTag === 'all' ? null : [buildTag]
     //Retrieve all the builds in a build definition (pipeline)
-    console.log(`Parameters that will be passed to the api call are: \n
+    console.debug(`Parameters that will be passed to the api call are: \n
         projectid:${projectId} \n
         buildDefinition: ${buildDefinition} \n
         tag: ${tags} \n
@@ -166,28 +166,28 @@ async function GetBuilds(buildDefinition, buildBranch)
         return b.id - a.id;
     });
 
-    console.log(`Taking at most ${buildsToTake} of available ${builds.length} for display`);
+    console.debug(`Taking at most ${buildsToTake} of available ${builds.length} for display`);
     //Reduce array size if bigger than number of builds wanted
     if(builds.length > buildsToTake)
     {
         builds = builds.slice(0, buildsToTake);
     }
 
-    console.log("Starting to build html table")
+    console.debug("Starting to build html table")
     //Creating html table
     let table = document.createElement('table');
     let buildsLength = builds.length;
     //For loop because foreach returns a string
     for(let i = 0; i < buildsLength; i++)
     {
-        console.log(`Building row number ${i}`);
+        console.debug(`Building row number ${i}`);
         alreadyPending = false;
         if (showStages == true) {
             //Get the timeline for a specific build run
             let timeline = await timelineClient.getBuildTimeline(projectId, builds[i].id);
             if(typeof timeline === "undefined")
             {
-                console.log("Could not build a valid row");
+                console.debug("Could not build a valid row");
                 let tableRow = document.createElement('tr');
                 tableRow.appendChild(BuildRowNameElement(builds[i]._links.web.href, builds[i].buildNumber));
                 let tableErrorCell = document.createElement('td');
@@ -205,7 +205,7 @@ async function GetBuilds(buildDefinition, buildBranch)
                     let stage = new Stage(record);
                     stageArray.push(stage);
                 });
-                console.log(`Starting to builds columns for the ${stageArray.length} build stages`);
+                console.debug(`Starting to builds columns for the ${stageArray.length} build stages`);
                 //Build row using our arrays
                 table.appendChild(BuildHtmlRow(stageArray, builds[i]._links.web.href, builds[i].buildNumber));
             }
@@ -224,7 +224,7 @@ async function GetBuilds(buildDefinition, buildBranch)
     let buildContainer = document.getElementById('build-container');
 
     try{
-        console.log("Build container was successfully built");
+        console.debug("Build container was successfully built");
         buildContainer.replaceChildren(table);
         initialized = true;
     }
@@ -266,7 +266,7 @@ function BuildHtmlRow(stages, buildUrl, buildBuildNumber)
     tdElements.forEach(element => {
         rowElement.appendChild(element);
     });
-    console.log("Row successfully built");
+    console.debug("Row successfully built");
     return rowElement;
 }
 
@@ -284,7 +284,7 @@ function BuildHtmlRowNoStages(buildStatus, buildUrl, buildNumber) {
     let tdElement = BuildRowElementNoStage(buildStatus, buildNumber, buildUrl);
     rowElement.appendChild(tdElement);
 
-    console.log("Row successfully built");
+    console.debug("Row successfully built");
   
     return rowElement;
   }
@@ -470,10 +470,10 @@ async function buildWidgetHeader(widgetSettings)
     if(!initialized)
     {
         await timelineClient.getTags(projectId).then(function (tags) {
-            console.log(tags)
+            console.debug(tags)
             if(tags.length > 0)
             {
-                console.log(`Tags found are ${tags.join(",").toString()}`)
+                console.debug(`Tags found are ${tags.join(",").toString()}`)
                 tags.sort().forEach(tag => {
                     let newOption = document.createElement('option');
                     newOption.setAttribute('value', tag);
@@ -483,12 +483,12 @@ async function buildWidgetHeader(widgetSettings)
             }
             if(tags == [] || !tags.includes(settingsTag))
             {
-                console.log(`The selected tag ${settingsTag} is no longer present in the pipelines. \n
+                console.debug(`The selected tag ${settingsTag} is no longer present in the pipelines. \n
             Reverting to default "all" tags"`)
                 defaultTagDropdown.value = 'all'
             }
             else {
-                console.log(`Setting current tag filter to ${settingsTag}`)
+                console.debug(`Setting current tag filter to ${settingsTag}`)
                 defaultTagDropdown.value = settingsTag;
             }
         });
@@ -500,12 +500,12 @@ async function buildWidgetHeader(widgetSettings)
             .map(el => el.value);
         if(tags == [] || !tags.includes(settingsTag))
         {
-            console.log(`The selected tag ${settingsTag} is no longer present in the pipelines. \n
+            console.debug(`The selected tag ${settingsTag} is no longer present in the pipelines. \n
                     Reverting to default "all" tags"`)
             defaultTagDropdown.value = 'all'
         }
         else {
-            console.log(`Setting current tag filter to ${settingsTag}`)
+            console.debug(`Setting current tag filter to ${settingsTag}`)
             defaultTagDropdown.value = settingsTag;
         }
     }
@@ -523,7 +523,7 @@ VSS.require(["TFS/Dashboards/WidgetHelpers", "TFS/Build/RestClient"],
 function (WidgetHelpers, TFS_Build_webApi) {
     WidgetHelpers.IncludeWidgetStyles();
     VSS.register("DeploymentsWidget", async function () {
-        console.log("Preparing setup for the widget data");
+        console.debug("Preparing setup for the widget data");
         projectId = VSS.getWebContext().project.id;
         timelineClient = TFS_Build_webApi.getClient();
         defaultTagDropdown =  document.getElementById("build-tag-dropdown");
@@ -532,29 +532,29 @@ function (WidgetHelpers, TFS_Build_webApi) {
             //Triggered when entering the dashboard
             load: async function (widgetSettings) {
                 try {
-                    console.log("Loading widget data");
+                    console.debug("Loading widget data");
                     await  buildWidgetHeader(widgetSettings);
                     await GetBuildWidget(widgetSettings);
                     return WidgetHelpers.WidgetStatusHelper.Success();
                 } catch (error) {
-                    console.log(`Hit an error while loading: ${error}`);
+                    console.debug(`Hit an error while loading: ${error}`);
                 }
             },
             // Triggered when clicking "reload" or changing branch in the configuration
             reload: async function(widgetSettings) {
                 try {
-                    console.log("Updating widget data");
+                    console.debug("Updating widget data");
                     reloading = true;
                     await buildWidgetHeader(widgetSettings);
                     reloading = false;
                     await GetBuildWidget(widgetSettings);
                     return WidgetHelpers.WidgetStatusHelper.Success();
                 } catch (error) {
-                    console.log(`Hit an error while loading: ${error}`);
+                    console.debug(`Hit an error while loading: ${error}`);
                 }
             }
         }
     });
-    console.log("The widget was successfully loaded");
+    console.debug("The widget was successfully loaded");
     VSS.notifyLoadSucceeded();
 });
