@@ -9,8 +9,8 @@ let buildDropdown = document.getElementById("build-dropdown");
 let branchDropdown = document.getElementById("branch-dropdown");
 let buildCountInput = document.getElementById("build-count");
 let defaultTagDropdown = document.getElementById("build-default-tag-dropdown")
-let defaultBranchDropdownOptions = '<option value="" selected disabled hidden>Please select a query</option>';
 let showStagesDropdown = document.getElementById("show-stages");
+let codeClient;
 
 /**
  * @description Add definition names to the build definition dropdown
@@ -50,17 +50,28 @@ async function populateTagDropdown(buildClient) {
 }
 
 /**
- * @description Populate the branch dropdown
- * @param definitionRepository string
- * @param codeClient TFS/VersionControl/GitRestClient
- * @param settings object
- * @returns {Promise<void>}
+ * @param WidgetHelpers TFS/Dashboards/WidgetHelpers
+ * @param widgetConfigurationContext IWidgetConfigurationContext
+ * @param definitions BuildDefinition[]
  */
-async function populateBuildBranchDropdown(definitionRepository, codeClient, settings)
+async function onBuildDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions)
 {
-    /**
-     * @type GitBranchStats[]
-     */
+    console.debug("Resetting the branch dropdown");
+    branchDropdown.innerHTML = '<option value="all" selected>all</option>';
+    branchDropdown.value = "all";
+
+    let buildDefinition = buildDropdown.value
+    let currentDefinition = definitions.find(d => Number(d.id) === Number(buildDefinition));
+
+    console.debug(`Retrieving the branches for the repository ${currentDefinition.repository.name}`);
+    await fillBranchesDropDown(currentDefinition.repository.id, 'all');
+
+    console.debug(`Selected build ${buildDropdown.value} for definition ${currentDefinition.name}`);
+    notifyWidgetConfigurationContext(WidgetHelpers, widgetConfigurationContext, currentDefinition.name);
+}
+
+async function fillBranchesDropDown(definitionRepository, buildBranch)
+{
     let repositoryBranches = await codeClient.getBranches(definitionRepository, projectId, null);
 
     // The branches as not formatted as "refs" when retrieved.
@@ -68,57 +79,14 @@ async function populateBuildBranchDropdown(definitionRepository, codeClient, set
         .filter((value, index, self) => self.indexOf(value) === index);
 
     console.debug(`Starting to populate the branch dropdown. ${branchArray.length} branches to add`);
-    if (branchArray.length > 0) {
-        branchArray.forEach(branch => {
-            let newOption = document.createElement('option');
-            newOption.setAttribute('value', branch);
-            newOption.text = branch.replace("refs/heads/", "");
-            branchDropdown.append(newOption);
-        });
-        branchDropdown.removeAttribute('disabled');
-    }
-    console.debug(`Branch dropdown value set to ${settings.buildBranch}`);
-    branchDropdown.value = settings.buildBranch;
-}
+    branchArray.forEach(branch => {
+        let newOption = document.createElement('option');
+        newOption.setAttribute('value', branch);
+        newOption.text = branch.replace("refs/heads/", "");
+        branchDropdown.append(newOption);
+    });
 
-/**
- * @description Update the branch dropdown when the build definition dropdown is changed.
- * @param definitions BuildDefinition[]
- * @param codeClient TFS/VersionControl/GitRestClient
- * @returns {Promise<void>}
- */
-async function onBuildDropdownChange(definitions, codeClient)
-{
-    console.debug("Resetting the branch dropdown");
-    branchDropdown.innerHTML = defaultBranchDropdownOptions;
-    branchDropdown.value = "";
-    let buildDefinition = buildDropdown.value
-
-    let currentDefinition = definitions.find(d => Number(d.id) === Number(buildDefinition));
-
-    let definitionRepository = currentDefinition.repository.id;
-
-    console.debug(`Retrieving the branches for the repository ${currentDefinition.repository.name}`);
-    /**
-     * @type GitBranchStats[]
-     */
-    let repositoryBranches = await codeClient.getBranches(definitionRepository, projectId, null);
-
-    let branchArray = repositoryBranches.map((branch) => `refs/heads/${branch.name}`)
-        .filter((value, index, self) => self.indexOf(value) === index);
-
-    console.debug(`Starting to populate the branch dropdown. ${branchArray.length} branches to add`);
-    if (branchArray.length > 0) {
-        branchArray.forEach(branch => {
-            let newOption = document.createElement('option');
-            newOption.setAttribute('value', branch);
-            newOption.text = branch.replace("refs/heads/", "");
-            branchDropdown.append(newOption);
-        });
-        branchDropdown.removeAttribute('disabled');
-    } else {
-        branchDropdown.setAttribute('disabled', true);
-    }
+    branchDropdown.value = buildBranch;
 }
 
 /**
@@ -128,79 +96,63 @@ async function onBuildDropdownChange(definitions, codeClient)
  * @param definitions BuildDefinition[]
  */
 function onBranchDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions) {
-    let definition = definitions.filter(definition => Number(definition.id) === Number(buildDropdown.value))[0];
-    console.debug(`Selected branch ${branchDropdown.value} for definition ${definition.name}`);
+    let definitionName = definitions.filter(definition => definition.id == buildDropdown.value)[0].name;
+    console.debug(`Selected branch ${branchDropdown.value} for definition ${definitionName}`);
+    notifyWidgetConfigurationContext(WidgetHelpers, widgetConfigurationContext, definitionName);
+}
+
+/**
+ *
+ * @param WidgetHelpers TFS/Dashboards/WidgetHelpers
+ * @param widgetConfigurationContext IWidgetConfigurationContext
+ * @param definitions BuildDefinition[]
+ */
+function onBuildCountInputChange(WidgetHelpers, widgetConfigurationContext, definitions) {
+    let definitionName = definitions.filter(definition => definition.id == buildDropdown.value)[0].name;
+    console.debug(`Selected to display ${buildDropdown.value} for branch ${branchDropdown.value} and definition ${definitionName}`);
+    notifyWidgetConfigurationContext(WidgetHelpers, widgetConfigurationContext, definitionName);
+}
+
+/**
+ *
+ * @param WidgetHelpers TFS/Dashboards/WidgetHelpers
+ * @param widgetConfigurationContext IWidgetConfigurationContext
+ * @param definitions BuildDefinition[]
+ */
+function onDefaultTagDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions) {
+    let definitionName = definitions.filter(definition => definition.id == buildDropdown.value)[0].name;
+    console.debug(`Selected to filter by tag ${defaultTagDropdown.value} for branch ${branchDropdown.value} and definition ${definitionName}`);
+    notifyWidgetConfigurationContext(WidgetHelpers, widgetConfigurationContext, definitionName);
+}
+
+/**
+ *
+ * @param WidgetHelpers TFS/Dashboards/WidgetHelpers
+ * @param widgetConfigurationContext IWidgetConfigurationContext
+ * @param definitions BuildDefinition[]
+ */
+function onShowStagesDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions) {
+    let definitionName = definitions.filter(definition => definition.id == buildDropdown.value)[0].name;
+    console.debug(`Selected stage ${showStagesDropdown.value} for branch ${branchDropdown.value} and definition ${definitionName}`);
+    notifyWidgetConfigurationContext(WidgetHelpers, widgetConfigurationContext, definitionName);
+}
+
+function notifyWidgetConfigurationContext(WidgetHelpers, widgetConfigurationContext, definitionName)
+{
     let customSettings = {
         data: JSON.stringify({
-            buildDefinition: buildDropdown.value,
-            buildBranch: branchDropdown.value,
-            definitionName: definition.name,
-            buildCount: buildCountInput.value,
-            defaultTag: defaultTagDropdown.value,
-            showStages: showStagesDropdown.value,
-        })
-    };
+          buildDefinition: buildDropdown.value,
+          buildBranch: branchDropdown.value,
+          definitionName: definitionName,
+          buildCount: buildCountInput.value,
+          defaultTag: defaultTagDropdown.value,
+          showStages: showStagesDropdown.value,
+        }),
+      };
+
     let eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
     let eventArgs = WidgetHelpers.WidgetEvent.Args(customSettings);
     widgetConfigurationContext.notify(eventName, eventArgs);
-}
-
-function onBuildCountInputChange(WidgetHelpers, widgetConfigurationContext, definitions) {
-    if (branchDropdown.value !== "" && buildDropdown.value != "") {
-        let definition = definitions.filter(definition => definition.id == buildDropdown.value)[0];
-        console.debug(`Selected to display ${buildDropdown.value} for branch ${branchDropdown.value} and definition ${definition.name}`);
-        let customSettings = {
-            data: JSON.stringify({
-                buildDefinition: buildDropdown.value,
-                buildBranch: branchDropdown.value,
-                definitionName: definition.name,
-                buildCount: buildCountInput.value,
-                defaultTag: defaultTagDropdown.value,
-                showStages: showStagesDropdown.value,
-            })
-        };
-        let eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
-        let eventArgs = WidgetHelpers.WidgetEvent.Args(customSettings);
-        widgetConfigurationContext.notify(eventName, eventArgs);
-    }
-}
-
-function onDefaultTagDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions) {
-    if (branchDropdown.value !== "" && buildDropdown.value != "") {
-        let definition = definitions.filter(definition => definition.id == buildDropdown.value)[0];
-        console.debug(`Selected to filter by tag ${defaultTagDropdown.value} for branch ${branchDropdown.value} and definition ${definition.name}`);
-        let customSettings = {
-            data: JSON.stringify({
-                buildDefinition: buildDropdown.value,
-                buildBranch: branchDropdown.value,
-                definitionName: definition.name,
-                buildCount: buildCountInput.value,
-                defaultTag: defaultTagDropdown.value,
-                showStages: showStagesDropdown.value,
-            })
-        };
-        let eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
-        let eventArgs = WidgetHelpers.WidgetEvent.Args(customSettings);
-        widgetConfigurationContext.notify(eventName, eventArgs);
-    }
-}
-
-function onShowStagesDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions) {
-  let definition = definitions.filter((definition) => definition.id == buildDropdown.value)[0];
-  let customSettings = {
-    data: JSON.stringify({
-      buildDefinition: buildDropdown.value,
-      buildBranch: branchDropdown.value,
-      definitionName: definition.name,
-      buildCount: buildCountInput.value,
-      defaultTag: defaultTagDropdown.value,
-      showStages: showStagesDropdown.value,
-    }),
-  };
-  
-  let eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
-  let eventArgs = WidgetHelpers.WidgetEvent.Args(customSettings);
-  widgetConfigurationContext.notify(eventName, eventArgs);
 }
 
 /**
@@ -213,11 +165,6 @@ function saveSettings(WidgetHelpers, definitions)
 {
     let definition = definitions.filter(definition => definition.id == buildDropdown.value)[0];
     console.debug("Starting to save settings");
-    if (branchDropdown.value === "") {
-        console.debug(`No branch was selected for the build definition ${definition.name}. Settings will not be saved`);
-        return WidgetHelpers.WidgetStatusHelper.Invalid("The branch selected is invalid");
-    }
-
 
     let customSettings = {
         data: JSON.stringify({
@@ -250,13 +197,12 @@ VSS.require(["TFS/Dashboards/WidgetHelpers", "VSS/Service", "TFS/Build/RestClien
              */
             let definitions = await buildClient.getDefinitions(projectId, null, null, null, null, null, null, null,
              null, null, null, null, true, null, null);
-            let codeClient = TFS_VSC_webApi.getClient();
+            codeClient = TFS_VSC_webApi.getClient();
 
             populateBuildDefinitionDropdown(definitions);
 
             console.debug(`Retrieving available tags in project ${VSS.getWebContext().project.name}`);
             let tags = await populateTagDropdown(buildClient);
-
 
             return {
                 load: async function (widgetSettings, widgetConfigurationContext) {
@@ -289,8 +235,7 @@ VSS.require(["TFS/Dashboards/WidgetHelpers", "VSS/Service", "TFS/Build/RestClien
 
                         let definitionRepository = currentDefinition.repository.id;
                         console.debug("Populating branches as a definition is already set.")
-                        await populateBuildBranchDropdown(definitionRepository, codeClient, settings);
-
+                        await fillBranchesDropDown(definitionRepository, settings.buildBranch);
                     }
                     else {
                         console.debug("Settings are either not present or valid. This will be a first setup for the configuration.");
@@ -298,7 +243,7 @@ VSS.require(["TFS/Dashboards/WidgetHelpers", "VSS/Service", "TFS/Build/RestClien
 
                     //Create a json object and pass it as widget settings
                     buildDropdown.onchange = async function () {
-                        await onBuildDropdownChange(definitions, codeClient);
+                        await onBuildDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions);
                     };
                     branchDropdown.onchange = function()
                     {
