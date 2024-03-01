@@ -57,7 +57,7 @@ async function populateTagDropdown(buildClient) {
 async function onBuildDropdownChange(WidgetHelpers, widgetConfigurationContext, definitions)
 {
     console.debug("Resetting the branch dropdown");
-    branchDropdown.innerHTML = '<option value="all" selected>all</option>';
+    branchDropdown.innerHTML = '<option value="all">all</option>';
     branchDropdown.value = "all";
 
     let buildDefinition = buildDropdown.value
