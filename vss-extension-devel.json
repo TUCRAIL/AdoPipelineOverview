@@ -85,22 +85,8 @@
   ],
   "files": [
     {
-      "path": "widget.html", "addressable": true
-    },
-    {
-      "path": "widget.css", "addressable": true
-    },
-    {
-      "path": "scripts", "addressable": true
-    },
-    {
-      "path": "sdk/scripts", "addressable": true
-    },
-    {
-      "path": "img", "addressable": true
-    },
-    {
-      "path": "configuration.html", "addressable": true
+      "path": "dist",
+      "addressable": true
     }
   ],
   "scopes":[

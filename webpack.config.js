@@ -7,6 +7,18 @@ module.exports = {
     devtool: "inline-source-map",
     devServer: {
         port: 3000,
+        static: [
+            {
+                directory:path.resolve(__dirname, "dist")
+            },
+            {
+                directory: path.resolve(__dirname)
+            }
+        ],
+        server: 'https',
+        open: {
+            target: 'widget.html'
+        }
     },
     entry: {
         widget: "./src/widget.tsx",
@@ -14,7 +26,7 @@ module.exports = {
     },
     output: {
         filename: "[name].js",
-        publicPath: "/dist/"
+        publicPath: "/dist/",
     },
     resolve: {
         extensions: [".ts", ".tsx", ".js"],
@@ -54,7 +66,8 @@ module.exports = {
     plugins: [
         new CopyWebpackPlugin({
             patterns: [
-                { from: "**/*.html", context: "src" }
+                { from: "**/*.html", context: "src" },
+                { from: "**/*.css", context: "src" }
             ]
         })
     ]
