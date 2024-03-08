@@ -2,6 +2,8 @@
   "manifestVersion": 1,
   "id": "vsts-extensions-myExtensions",
   "version": "1.0.0",
+  "baseUri": "https://localhost:3000",
+  "public": false,
   "name": "Your extension name",
   "description": "Show the various pipeline builds for a specific branch",
   "publisher": "your-publisher-id",

@@ -4,12 +4,17 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 
 module.exports = {
+    devtool: "inline-source-map",
+    devServer: {
+        port: 3000,
+    },
     entry: {
         widget: "./src/widget.tsx",
         configuration: "./src/configuration.tsx",
     },
     output: {
-        filename: "[name].js"
+        filename: "[name].js",
+        publicPath: "/dist/"
     },
     resolve: {
         extensions: [".ts", ".tsx", ".js"],
