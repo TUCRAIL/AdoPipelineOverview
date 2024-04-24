@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "azure-devops-extension-api": "^4.233.0",
-    "azure-devops-extension-sdk": "^4.0.2",
+    "azure-devops-extension-sdk": "^3.1.2",
     "azure-devops-ui": "^2.235.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
