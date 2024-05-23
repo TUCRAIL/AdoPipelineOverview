@@ -28,16 +28,11 @@ As such, here is a small list of improvements we would like to implement, and yo
 ### Support for multiple branch filtering
 
 Right now, this widget can only filter by a single branch. It would be better to be able to filter either:
-- All branches or one specific (similarly to tags)
 - A multi-selection of many branches
 
 ### Support for multiple tag filtering
 This is similar to the previous point. Except that a multi-selection dropdown should be implemented
 
-### Change the build count from a select box to a free input text field
-
-Right now, the build count is limited between 5 and 10. With a text field, the user could show any number of builds
-they wish
 
 ### Support for multi-stage display
 
@@ -47,3 +42,32 @@ displaying this currently. This would likely be implemented through a third part
 ### Better UI
 
 Regardless of the previous point. The UI is "Bare bone" and could be heavily improved.
+
+## How to run locally for development
+
+This project is using webpack to bundle the code and debug it.
+
+To get started with the project, run `npm install` in the same directory as the `package.json` file. Also run `npm i -g tfx-cli` to install the Azure DevOps CLI.
+
+Copy paste the `vss-extension-devel.json` file inside the same directory and do not track it with git. Inside that file, modify:
+
+- The id of the extension
+- It's name
+- The publisher
+- The following string `"your-publisher-id.vsts-extensions-myExtensions.DeploymentsWidget.Configuration"` to match your publisher id
+
+Then, you can run `npm compile` to publish the artifacts and run `tfx extension create --manifests .\vss-extension-devel.json` to create a vsix file. 
+Go to `https://marketplace.visualstudio.com/` and publish this vsix file to your publisher to create the development extension.
+
+You will also need to share this extension with your organization before being able to install it in your ADO instance.
+
+Afterward, you can run `debug-server` to start a local server that will serve the widget.
+
+Add the widget to your dashboard and you should be able to see the widget in action. The widget will automatically reflect changes as you make them so you shouldn't need to publish the extension unless you make changes that specifically requires them.
+Such as:
+
+- Changing the scopes
+- Adding a new addressable folder
+- Changing the extension/contributions ids
+- ...
+
