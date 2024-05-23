@@ -25,21 +25,50 @@ import {
 } from "azure-devops-extension-api/Build";
 import {GitRestClient, GitServiceIds} from "azure-devops-extension-api/Git";
 import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api";
+import {TextField} from "azure-devops-ui/TextField";
+import {Checkbox} from "azure-devops-ui/Checkbox";
 
 
-class ConfigurationWidget extends React.Component implements Dashboard.IConfigurableWidget {
+export interface IProps {}
+
+interface IConfigurationWidgetState {
+    isBranchDropdownDisabled: boolean;
+    buildCount: number;
+    showStages: boolean;
+    selectedTag: string;
+    selectedBuildDefinitionId: number;
+    selectedBranch: string;
+}
+
+
+class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetState> implements Dashboard.IWidgetConfiguration{
     private projectId = "";
 
     private buildDefinitions : BuildDefinition3_2[] | undefined;
     private buildDefinitionItems : IListBoxItem[] = [];
-    private selectedBuildDefinitionId = 0;
     private selectedBuildDefinition = new ObservableValue<string>("");
 
+    private widgetConfigurationContext?: Dashboard.IWidgetConfigurationContext;
+
     private branchItems : IListBoxItem[] = [];
-    private selectedBranchDefinition = new ObservableValue<string>("all");
+
+    private tagItems : IListBoxItem[] = [];
+    private tagSelection : DropdownSelection = new DropdownSelection();
 
     private getDataAsBuildReference(data: {}) : BuildDefinition3_2 {
         return data as BuildDefinition3_2;
+    }
+
+    constructor(props : IProps) {
+        super(props)
+        this.state = {
+            isBranchDropdownDisabled: true,
+            buildCount: 1,
+            showStages: true,
+            selectedTag: 'all',
+            selectedBuildDefinitionId: 0,
+            selectedBranch: ""
+        }
     }
 
     async preload(_widgetSettings: Dashboard.WidgetSettings) {
@@ -47,9 +76,11 @@ class ConfigurationWidget extends React.Component implements Dashboard.IConfigur
     }
 
     async load(
-        widgetSettings: Dashboard.WidgetSettings
+        widgetSettings: Dashboard.WidgetSettings,
+        widgetConfigurationContext: Dashboard.IWidgetConfigurationContext
     ): Promise<Dashboard.WidgetStatus> {
         try {
+            this.widgetConfigurationContext = widgetConfigurationContext;
             //await this.setStateFromWidgetSettings(widgetSettings);
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
@@ -69,11 +100,15 @@ class ConfigurationWidget extends React.Component implements Dashboard.IConfigur
     }
 
     private onBuildDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
-        this.isBranchDropdownDisabled.value = true;
+        this.setState((state, props) => ({
+            isBranchDropdownDisabled: true
+        }));
         this.selectedBuildDefinition.value = selectedDropdown.text || "";
-        this.selectedBuildDefinitionId = this.getDataAsBuildReference(selectedDropdown.data!).id;
         console.debug(`Selected new build definition ${this.selectedBuildDefinition.value}`);
-        this.selectedBranchDefinition.value = "";
+        this.setState((state, props) => ({
+            selectedBuildDefinitionId: this.getDataAsBuildReference(selectedDropdown.data!).id,
+            selectedBranch: ""
+        }));
         this.branchItems[0] = {
             id: "all",
             text: "all"
@@ -83,13 +118,39 @@ class ConfigurationWidget extends React.Component implements Dashboard.IConfigur
             Number(this.getDataAsBuildReference(d).id) === Number(this.getDataAsBuildReference(selectedDropdown.data!).id));
 
         this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'all');
+        this.fillTagsDropDown();
+
+        console.debug(`Selected new build definition ${this.state.selectedBuildDefinitionId}`);
+    };
+
+    private onBuildCountChanged = (event:  React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, newValue : string) => {
+        if(isNaN(parseInt(newValue, 10)))
+        {
+            return;
+        }
+        else if(parseInt(newValue, 10) < 1 || parseInt(newValue, 10) > 50)
+        {
+            return;
+        }
+        this.setState((state, props) => ({
+            buildCount: parseInt(newValue, 10)
+        }));
+    }
+
+    private onShowStagesChanged = (event: (React.MouseEvent<HTMLElement, MouseEvent> | React.KeyboardEvent<HTMLElement>), checked: boolean) => {
+        this.setState((state, props) => ({
+            showStages: checked
+        }));
     };
 
     private onBranchDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
-        this.selectedBranchDefinition.value = selectedDropdown.text || "";
+        this.setState((state, props) => ({
+            selectedBranch: selectedDropdown.text || ""
+        }));
     };
 
     private async fillBranchesDropDown(definitionRepositoryId: string, buildBranch: string) {
+        this.branchItems = [];
         const codeClient = API.getClient<GitRestClient>(GitRestClient);
 
         const repositoryBranches = await codeClient.getBranches(definitionRepositoryId,
@@ -107,18 +168,56 @@ class ConfigurationWidget extends React.Component implements Dashboard.IConfigur
             this.branchItems.push(newItem)
             if(branch === buildBranch)
             {
-                this.selectedBranchDefinition.value =branch;
+                this.setState((state, props) => ({
+                    selectedBranch: branch
+                }));
             }
             console.debug("Adding branch " + branch);
         });
 
-        this.isBranchDropdownDisabled.value = false;
+        this.setState((state, props) => ({
+            isBranchDropdownDisabled: false
+        }));
+    }
+
+    private onTagDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
+
+        this.setState((state, props) => ({
+            selectedTag: selectedDropdown.text || "all"
+        }));
+    }
+
+    private async fillTagsDropDown() {
+        const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
+        const tags = await buildClient.getTags(this.projectId);
+
+        console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
+        this.tagItems = [];
+        this.tagItems.push({
+            id: "all",
+            text: "all"
+        });
+        if (tags.length > 0) {
+            tags.sort().forEach(tag => {
+                const newItem : IListBoxItem<{}> = {
+                    id: tag,
+                    text: tag
+                };
+
+                this.tagItems.push(newItem);
+            });
+        }
+
+        this.tagSelection.select(1);
+        this.setState((state, props) => ({
+            selectedTag: "all"
+        }));
     }
 
     public componentDidMount() {
         SDK.init().then(() =>
         {
-            SDK.register(SDK.getContributionId(), this/*, function () : IWidgetConfiguration {
+            SDK.register('DeploymentsWidget.Configuration', this/*, function () : IWidgetConfiguration {
             console.log("Registering contribution")
             return {
                 onSave(): Promise<SaveStatus> {
@@ -129,6 +228,7 @@ class ConfigurationWidget extends React.Component implements Dashboard.IConfigur
             }
         }*/
             )
+            SDK.resize(350, 500)
             this.initializeState();
         }
 
@@ -167,54 +267,155 @@ class ConfigurationWidget extends React.Component implements Dashboard.IConfigur
         });*/
     }
 
-    private isBranchDropdownDisabled = new ObservableValue<boolean>(true);
+    private async validateConfiguration() : Promise<Dashboard.SaveStatus>
+    {
+        const configuration = new WidgetConfigurationSettings(this.state.selectedBuildDefinitionId,
+            this.state.selectedBranch,
+            this.selectedBuildDefinition.value,
+            this.state.buildCount,
+            this.state.selectedTag,
+            this.state.showStages);
+        let errorMessage = "";
+        if(configuration.buildDefinition === 0)
+        {
+            errorMessage += "The build definition selected is invalid \n";
+        }
+        if(configuration.buildBranch === "")
+        {
+            errorMessage += "The branch selected is invalid \n";
+        }
+        if(configuration.buildCount < 1 || configuration.buildCount > 50)
+        {
+            errorMessage += "The number of builds to show must be between 1 and 50 \n";
+        }
+        if(errorMessage !== "")
+        {
+            console.debug("Invalid configuration: \n" +
+            errorMessage);
+            return Dashboard.WidgetConfigurationSave.Invalid();
+            // await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationError, {
+            //     data: errorMessage
+            // });
+        }
+        else {
+            const customSettings: CustomSettings = {
+                data: JSON.stringify(configuration)
+            };
+            console.debug("Configuration is valid");
+            await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationChange, customSettings);
+            return  Dashboard.WidgetConfigurationSave.Valid(customSettings);
+        }
+    }
+
+    componentDidUpdate(prevProps: Readonly<IProps>, prevState: Readonly<IConfigurationWidgetState>, snapshot?: any) {
+        this.validateConfiguration();
+    }
 
 
     public render() {
         console.debug("Rendering configuration widget")
         return(
             <div>
-                <Dropdown items={this.buildDefinitionItems}
-                          onSelect={this.onBuildDropdownChange}/>
-                <Observer selectedItem={this.selectedBuildDefinition}>
-                    {(props: { selectedItem: string }) => {
-                        return (
-                            <span style={{ marginLeft: "8px", width: "150px" }}>
+                <div id={"build_definition"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
+                    <Dropdown items={this.buildDefinitionItems}
+                              onSelect={this.onBuildDropdownChange}
+
+                    required={true}/>
+                    <Observer selectedItem={this.selectedBuildDefinition}>
+                        {(props: { selectedItem: string }) => {
+                            return (
+                                <span style={{marginLeft: "8px", width: "150px"}}>
                                 Selected Item: {props.selectedItem}{" "}
                             </span>
-                        );
-                    }}
-                </Observer>
-                <Dropdown items={this.branchItems}
-                          onSelect={this.onBranchDropdownChange}
-                          disabled={this.isBranchDropdownDisabled.value}/>
-                <Observer selectedItem={this.selectedBranchDefinition}>
-                    {(props: { selectedItem: string }) => {
-                        return (
-                            <span style={{ marginLeft: "8px", width: "150px" }}>
+                            );
+                        }}
+                    </Observer>
+                </div>
+
+                <div id={"branch"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
+                    <Dropdown items={this.branchItems}
+                              onSelect={this.onBranchDropdownChange}
+                              disabled={this.state.isBranchDropdownDisabled}/>
+                    <Observer selectedItem={this.state.selectedBranch}>
+                        {(props: { selectedItem: string }) => {
+                            return (
+                                <span style={{marginLeft: "8px", width: "150px"}}>
                                 Selected Item: {props.selectedItem}{" "}
                             </span>
-                        );
-                    }}
-                </Observer>
+                            );
+                        }}
+                    </Observer>
+                </div>
+                <div id={"build_count"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
+                    <TextField
+                        value={this.state.buildCount.toString()}
+                        inputType={"number"}
+                        onChange={this.onBuildCountChanged}
+                        required={true}
+                        label={"Builds to show"}
+/>
+                    <Observer selectedItem={this.state.buildCount.toString()}>
+                        {(props: { selectedItem: string }) => {
+                            return (
+                                <span style={{marginLeft: "8px", width: "150px"}}>
+                                Selected Item: {props.selectedItem}{" "}
+                            </span>
+                            );
+                        }}
+                    </Observer>
+                </div>
+                <div id={"tags"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
+                    <Dropdown items={this.tagItems}
+                              onSelect={this.onTagDropdownChange}
+                              disabled={this.state.selectedBuildDefinitionId === 0}/>
+                    <Observer selectedItem={this.state.selectedTag}>
+                        {(props: { selectedItem: string }) => {
+                            return (
+                                <span style={{marginLeft: "8px", width: "150px"}}>
+                                Selected Tag: {props.selectedItem}{" "}
+                            </span>
+                            );
+                        }}
+                    </Observer>
+                </div>
+                <div id={"show stages"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
+                    <Checkbox
+                        checked={this.state.showStages}
+                        onChange={this.onShowStagesChanged}
+                        label={"Show Stages"}
+                    ></Checkbox>
+                    <Observer selectedItem={this.state.showStages}>
+                        {(props: { selectedItem: boolean }) => {
+                            return (
+                                <span style={{marginLeft: "8px", width: "150px"}}>
+                                Selected Item: {props.selectedItem.toString()}{" "}
+                            </span>
+                            );
+                        }}
+                    </Observer>
+                </div>
+
+
             </div>
         )
+    }
+
+    async onSave(): Promise<SaveStatus> {
+        return await this.validateConfiguration();
     }
 }
 
 
-
-class WidgetConfigurationSettings {
-    public buildDefinition : number;
-    public buildBranch : string;
-    public definitionName : string;
-    public buildCount : number;
-    public defaultTag : string;
-    public showStages : boolean;
+export class WidgetConfigurationSettings {
+    public buildDefinition: number;
+    public buildBranch: string;
+    public definitionName: string;
+    public buildCount: number;
+    public defaultTag: string;
+    public showStages: boolean;
 
     constructor(buildDefinition: number, buildBranch: string, definitionName: string, buildCount: number,
-                defaultTag: string, showStages: boolean)
-    {
+                defaultTag: string, showStages: boolean) {
         this.buildDefinition = buildDefinition;
         this.buildBranch = buildBranch;
         this.definitionName = definitionName;
@@ -223,18 +424,6 @@ class WidgetConfigurationSettings {
         this.showStages = showStages;
     }
 
-}
-
-async function notifyWidgetConfigurationContext(definitionName: string, widgetConfigurationContext: IWidgetConfigurationContext)
-{
-    const configuration = new WidgetConfigurationSettings(1, "" +
-        "", definitionName, 0, "", false);
-
-    const customSettings : CustomSettings = {
-        data: JSON.stringify(configuration)
-    };
-
-    await widgetConfigurationContext.notify(ConfigurationEvent.ConfigurationChange, customSettings);
 }
 
 
