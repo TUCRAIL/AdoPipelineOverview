@@ -49,14 +49,14 @@ This project is using webpack to bundle the code and debug it.
 
 To get started with the project, run `npm install` in the same directory as the `package.json` file. Also run `npm i -g tfx-cli` to install the Azure DevOps CLI.
 
-Copy paste the `vss-extension-devel.json` file inside the same directory and do not track it with git. Inside that file, modify:
+Copy paste the `vss-extension-devel.json` file inside the same directory with another name such as `vss-extension-debug.json` and do not track it with git. Inside that file, modify:
 
 - The id of the extension
 - It's name
 - The publisher
 - The following string `"your-publisher-id.vsts-extensions-myExtensions.DeploymentsWidget.Configuration"` to match your publisher id
 
-Then, you can run `npm compile` to publish the artifacts and run `tfx extension create --manifests .\vss-extension-devel.json` to create a vsix file. 
+Then, you can run `npm compile` to publish the artifacts and run `tfx extension create --manifests .\vss-extension-debug.json` to create a vsix file. 
 Go to `https://marketplace.visualstudio.com/` and publish this vsix file to your publisher to create the development extension.
 
 You will also need to share this extension with your organization before being able to install it in your ADO instance.
