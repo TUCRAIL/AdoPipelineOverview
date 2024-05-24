@@ -27,6 +27,7 @@ import {GitRestClient, GitServiceIds} from "azure-devops-extension-api/Git";
 import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api";
 import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
+import {useRef} from "react";
 
 
 export interface IProps {}
@@ -71,6 +72,23 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
         }
     }
 
+    /**
+     * Converts the widget settings to the state of the widget component
+     * @param widgetSettings The widget settings to convert
+     * @private
+     */
+    private setStateFromWidgetSettings(widgetSettings: Dashboard.WidgetSettings) {
+        const settings = widgetSettings.customSettings.data;
+        const configuration = JSON.parse(settings) as WidgetConfigurationSettings;
+        this.setState((state, props) => ({
+            selectedBuildDefinitionId: configuration.buildDefinition,
+            selectedBranch: configuration.buildBranch,
+            buildCount: configuration.buildCount,
+            showStages: configuration.showStages,
+            selectedTag: configuration.defaultTag
+        }));
+    }
+
     async preload(_widgetSettings: Dashboard.WidgetSettings) {
         return Dashboard.WidgetStatusHelper.Success();
     }
@@ -81,7 +99,7 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
     ): Promise<Dashboard.WidgetStatus> {
         try {
             this.widgetConfigurationContext = widgetConfigurationContext;
-            //await this.setStateFromWidgetSettings(widgetSettings);
+            this.setStateFromWidgetSettings(widgetSettings);
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
@@ -92,13 +110,18 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
         widgetSettings: Dashboard.WidgetSettings
     ): Promise<Dashboard.WidgetStatus> {
         try {
-            //await this.setStateFromWidgetSettings(widgetSettings);
+            this.setStateFromWidgetSettings(widgetSettings);
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
         }
     }
 
+    /**
+     * Event handler for when the build definition dropdown is changed
+     * @param event
+     * @param selectedDropdown
+     */
     private onBuildDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
         this.setState((state, props) => ({
             isBranchDropdownDisabled: true
@@ -109,10 +132,6 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
             selectedBuildDefinitionId: this.getDataAsBuildReference(selectedDropdown.data!).id,
             selectedBranch: ""
         }));
-        this.branchItems[0] = {
-            id: "all",
-            text: "all"
-        };
 
         const currentDefinition = this.buildDefinitionItems!.find(d =>
             Number(this.getDataAsBuildReference(d).id) === Number(this.getDataAsBuildReference(selectedDropdown.data!).id));
@@ -123,6 +142,11 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
         console.debug(`Selected new build definition ${this.state.selectedBuildDefinitionId}`);
     };
 
+    /**
+     * Event handler for when the build count is changed. Also controls the min and max value of the input field
+     * @param event
+     * @param newValue
+     */
     private onBuildCountChanged = (event:  React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, newValue : string) => {
         if(isNaN(parseInt(newValue, 10)))
         {
@@ -137,18 +161,34 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
         }));
     }
 
+    /**
+     * Event handler for when the show stages checkbox is changed
+     * @param event
+     * @param checked
+     */
     private onShowStagesChanged = (event: (React.MouseEvent<HTMLElement, MouseEvent> | React.KeyboardEvent<HTMLElement>), checked: boolean) => {
         this.setState((state, props) => ({
             showStages: checked
         }));
     };
 
+    /**
+     * Event handler for when the branch dropdown is changed
+     * @param event
+     * @param selectedDropdown
+     */
     private onBranchDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
         this.setState((state, props) => ({
             selectedBranch: selectedDropdown.text || ""
         }));
     };
 
+    /**
+     * Fills the branch dropdown with the branches of the selected build definition
+     * @param definitionRepositoryId The repository id of the selected build definition
+     * @param buildBranch The currently selected branch
+     * @private
+     */
     private async fillBranchesDropDown(definitionRepositoryId: string, buildBranch: string) {
         this.branchItems = [];
         const codeClient = API.getClient<GitRestClient>(GitRestClient);
@@ -160,6 +200,12 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
             .filter((value, index, self) => self.indexOf(value) === index);
 
         console.debug(`Starting to populate the branch dropdown. ${branchesArray.length} branches to add`);
+
+        this.branchItems.push({
+            id: "all",
+            text: "all"
+        });
+
         branchesArray.forEach(branch => {
             const newItem : IListBoxItem<{}> = {
                 id: branch,
@@ -180,6 +226,11 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
         }));
     }
 
+    /**
+     * Event handler for when the tag dropdown is changed
+     * @param event
+     * @param selectedDropdown
+     */
     private onTagDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
 
         this.setState((state, props) => ({
@@ -187,6 +238,10 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
         }));
     }
 
+    /**
+     * Fills the tag dropdown with the tags of the selected build definition
+     * @private
+     */
     private async fillTagsDropDown() {
         const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
         const tags = await buildClient.getTags(this.projectId);
@@ -236,8 +291,11 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
 
     }
 
+    /**
+     * Initializes the state of the widget dropdowns on load
+     * @private
+     */
     private async initializeState() {
-        //@ts-ignore
         var projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
         console.debug("Entered registration")
         var project = await projectService.getProject()
@@ -248,25 +306,29 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
             undefined, undefined, undefined, undefined, true, undefined, undefined);
 
 
-        buildDefinitions.forEach(definition => {
+        buildDefinitions.forEach(async (definition, index) => {
             this.buildDefinitionItems.push({
                 id: definition.id.toString(),
                 text: definition.name,
                 data: definition
             });
+            if(definition.id === this.state.selectedBuildDefinitionId)
+            {
+                this.selectedBuildDefinition.value = definition.name;
+                this.setState((state, props) => ({
+                   isBranchDropdownDisabled: false
+                }));
+                await this.fillBranchesDropDown(this.getDataAsBuildReference(definition).repository.id.toString(), this.state.selectedBranch);
+                //this.buildDefinitionDropdown.current?.state.props.selection?.select(index);
+            }
         });
 
-        /*await SDK.ready(async function() {
-            var projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
-            console.debug("Entered registration")
-            var project = await projectService.getProject()
-            console.debug(`project id is ${project?.id}`)
-            let projectId = SDK.getWebContext().project.id;
-            console.debug(`Instance id is ${SDK.getContributionId()}`)
-            console.debug(`Project ID is now ${projectId}`)
-        });*/
     }
 
+    /**
+     * Validates the configuration of the widget
+     * @private
+     */
     private async validateConfiguration() : Promise<Dashboard.SaveStatus>
     {
         const configuration = new WidgetConfigurationSettings(this.state.selectedBuildDefinitionId,
@@ -307,17 +369,19 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
         }
     }
 
+    // Validate configuration on each change in the widget
     componentDidUpdate(prevProps: Readonly<IProps>, prevState: Readonly<IConfigurationWidgetState>, snapshot?: any) {
         this.validateConfiguration();
     }
 
 
     public render() {
-        console.debug("Rendering configuration widget")
         return(
             <div>
                 <div id={"build_definition"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Dropdown items={this.buildDefinitionItems}
+                              noItemsText={"No build definition was found"}
+                              placeholder={this.state.selectedBuildDefinitionId === 0 ? "Select a build definition" : this.selectedBuildDefinition.value}
                               onSelect={this.onBuildDropdownChange}
 
                     required={true}/>
@@ -334,6 +398,8 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
 
                 <div id={"branch"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Dropdown items={this.branchItems}
+                              noItemsText={"No branch was found"}
+                              placeholder={this.state.selectedBranch === "" ? "Select a branch" : this.state.selectedBranch}
                               onSelect={this.onBranchDropdownChange}
                               disabled={this.state.isBranchDropdownDisabled}/>
                     <Observer selectedItem={this.state.selectedBranch}>
@@ -366,6 +432,8 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
                 </div>
                 <div id={"tags"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Dropdown items={this.tagItems}
+                              noItemsText={"No tag was found"}
+                              placeholder={this.state.selectedTag === "" ? "Select a tag" : this.state.selectedTag}
                               onSelect={this.onTagDropdownChange}
                               disabled={this.state.selectedBuildDefinitionId === 0}/>
                     <Observer selectedItem={this.state.selectedTag}>

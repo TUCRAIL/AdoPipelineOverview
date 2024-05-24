@@ -102,6 +102,10 @@ color: rgba(205, 74, 69, 1);
     border-bottom: 2px solid rgba(85,163,98,1);
 }
 
+.stage-warning {
+    border-bottom: 2px solid rgb(180, 108, 20);
+}
+
 .stage-neutral {
     border-bottom: 2px solid rgba(102,102,102,1);
 }
