@@ -28,6 +28,7 @@ import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api"
 import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
 import {useRef} from "react";
+import {createRoot} from "react-dom/client";
 
 
 export interface IProps {}
@@ -102,7 +103,9 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
             this.setStateFromWidgetSettings(widgetSettings);
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
-            return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
+            console.error()
+            return Dashboard.WidgetStatusHelper.Success((e as any).toString());
+            //return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
         }
     }
 
@@ -158,7 +161,9 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
         }
         this.setState((state, props) => ({
             buildCount: parseInt(newValue, 10)
+
         }));
+        this.validateConfiguration();
     }
 
     /**
@@ -170,6 +175,7 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
         this.setState((state, props) => ({
             showStages: checked
         }));
+        this.validateConfiguration();
     };
 
     /**
@@ -217,6 +223,12 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
                 this.setState((state, props) => ({
                     selectedBranch: branch
                 }));
+            }
+            else {
+                this.setState((state, props) => ({
+                        selectedBranch: ""
+                    }
+                ));
             }
             console.debug("Adding branch " + branch);
         });
@@ -272,16 +284,7 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
     public componentDidMount() {
         SDK.init().then(() =>
         {
-            SDK.register('DeploymentsWidget.Configuration', this/*, function () : IWidgetConfiguration {
-            console.log("Registering contribution")
-            return {
-                onSave(): Promise<SaveStatus> {
-                    return WidgetConfigurationSave.Valid({data: ""});
-                },
-                load: function (widgetHelpers : WidgetStatusHelper) {
-                return WidgetStatusHelper.Success();
-            }
-        }*/
+            SDK.register('DeploymentsWidget.Configuration', this
             )
             SDK.resize(350, 500)
             this.initializeState();
@@ -364,7 +367,8 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
                 data: JSON.stringify(configuration)
             };
             console.debug("Configuration is valid");
-            await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationChange, customSettings);
+            await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationChange,
+                ConfigurationEvent.Args(customSettings));
             return  Dashboard.WidgetConfigurationSave.Valid(customSettings);
         }
     }
@@ -376,7 +380,7 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
 
 
     public render() {
-        return(
+        return this.state && (
             <div>
                 <div id={"build_definition"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Dropdown items={this.buildDefinitionItems}
@@ -495,40 +499,10 @@ export class WidgetConfigurationSettings {
 }
 
 
-// SDK.init({
-//     loaded: false,
-//     applyTheme: true
-// });
-
 console.log('host is init')
-// // @ts-ignore
-// SDK.ready(function () {
-//     console.log('Host ready callback')
-//     SDK.register(SDK.getContributionId(), function () {
-//
-//         return {
-//             load: function () {
-//                 return WidgetStatusHelper.Success();
-//             }
-//         }
-//     })
-//     SDK.notifyLoadSucceeded();
-// }).then(r => {
-//     console.log('Host ready then function')
-//     console.debug(`host context id is ${SDK.getHost().id}`)
-//     SDK.register(SDK.getContributionId(), function () {
-//         console.debug("Entered registration")
-//         let projectId = SDK.getWebContext().project.id;
-//         console.debug(`Instance id is ${SDK.getContributionId()}`)
-//         console.debug(`Project ID is now ${projectId}`)
-//         ReactDOM.render(<ConfigurationWidget/>, document.getElementById("root"));
-//         return {
-//             load: function () {
-//                 return WidgetStatusHelper.Success();
-//             }
-//         }
-//     })
-//     SDK.notifyLoadSucceeded();
-// });
 
-ReactDOM.render(<ConfigurationWidget/>, document.getElementById("root"));
+const rootContainer = document.getElementById("root");
+
+const root = createRoot(rootContainer);
+
+root.render(<ConfigurationWidget/>);
