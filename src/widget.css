@@ -121,3 +121,7 @@ color: rgba(205, 74, 69, 1);
 a {
     color: rgb(0, 90, 158);
 }
+
+#build-tag-dropdown {
+    margin-top: 10px;
+}
