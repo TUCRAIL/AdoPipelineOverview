@@ -5,10 +5,20 @@ import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api"
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
 import React, {ReactElement} from "react";
 import * as ReactDOM from "react-dom";
+import { createRoot } from 'react-dom/client';
 import {IProps, WidgetConfigurationSettings} from "./configuration";
-import {Build, BuildRestClient, Timeline, TimelineRecord, TimelineRecordState} from "azure-devops-extension-api/Build";
+import {
+    Build, BuildQueryOrder,
+    BuildRestClient,
+    BuildResult,
+    TaskResult,
+    Timeline,
+    TimelineRecord,
+    TimelineRecordState
+} from "azure-devops-extension-api/Build";
 import {Status, Statuses, StatusSize} from "azure-devops-ui/Status";
 import SDK = require("azure-devops-extension-sdk");
+import {ZeroData} from "azure-devops-ui/ZeroData";
 
 
 class BuildWithTimeline {
@@ -27,6 +37,11 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
 
     private builds: BuildWithTimeline[] = []
     private projectId : string = ""
+    private neutralStageResult : TaskResult[] = [
+        TaskResult.Abandoned,
+        TaskResult.Canceled,
+        TaskResult.Skipped
+    ]
 
     componentDidMount() {
         SDK.init().then(() => {
@@ -42,7 +57,27 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         return false;
     }
 
-    private getStageUnderlineClass(stageStatus: TimelineRecordState, failed: boolean) : string {
+    private getStageUnderlineClass(stageStatus: TimelineRecordState, failed: boolean,stageResult?: TaskResult) : string {
+        if(stageResult !== undefined)
+        {
+            if(stageResult === TaskResult.Failed)
+            {
+                return 'stage-failed'
+            }
+            if(this.neutralStageResult.find(result => result === stageResult) !== undefined)
+            {
+                return 'stage-neutral'
+            }
+            if(stageResult === TaskResult.Succeeded)
+            {
+                return 'stage-success'
+            }
+            if(stageResult === TaskResult.SucceededWithIssues)
+            {
+                return 'stage-warning'
+            }
+        }
+
         if(failed)
         {
             return 'stage-failed'
@@ -61,47 +96,112 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         }
     }
 
-
+    private getTaskResultFromBuildResult(buildResult: BuildResult) : TaskResult {
+        switch (buildResult) {
+            case BuildResult.Succeeded: return TaskResult.Succeeded;
+            case BuildResult.Failed: return TaskResult.Failed;
+            case BuildResult.Canceled: return TaskResult.Canceled;
+            case BuildResult.PartiallySucceeded: return TaskResult.SucceededWithIssues;
+            case BuildResult.None: return TaskResult.Abandoned;
+            default: return TaskResult.Failed;
+        }
+    }
 
     render(): JSX.Element {
-        return (
+        //if(this.state === undefined || this.state?.definitionName === null || this.state?.buildBranch === null || this.state?.buildCount === null || this.state?.defaultTag === null)
+        if(!this.state)
+        {
+            return (<div>
+                <ZeroData imageAltText={"Widget not configured"}
+                          primaryText={"The widget must be configured"}
+                          secondaryText={
+                    <span>
+                        The widget is not configured or an update made the old configuration invalid. Please configure the widget.
+                    </span>
+                          }
 
-                <div>
-                   <table>
-                       <tbody>
-                       {this.builds.map((buildWithTimeline, index) => {
-                           return( <tr key={index}>
-                               <td>
-                                   <a href={buildWithTimeline.build._links.web.href} target={"_blank"}>
-                                       {buildWithTimeline.build.buildNumber}
-                                   </a>
-                               </td>
-                               {buildWithTimeline.timeline.records.map((record, indexTimeline) => {
-                                   if(typeof record === undefined)
-                                   {
-                                       return(<td key={`${index}/${indexTimeline}`} colSpan={99}>
-                                           <p> There was an error preventing the pipeline to run (invalid YAML, service connection not existing ...)</p>
-                                       </td>)
-                                   }
-                                   else {
-                                       return(<td key={`${index}/${indexTimeline}`} className={"row"}>
-                                           <div className={`stage ${this.getStageUnderlineClass(record.state, record.errorCount >= record.attempt)}`}>
-                                               {/*<template>*/}
+                />
+            </div>
+            )
+        }
+        return this.state && (
+            <div id="widget-container">
 
-                                                   <StageStatus failed={record.errorCount >= record.attempt} stageStatus={record.state === undefined ? undefined : record.state} multiStage={buildWithTimeline.timeline.records.length > 1} startTime={record.startTime} previousStatus={index > 0 && buildWithTimeline.timeline.records.length > 1 && buildWithTimeline.timeline.records[indexTimeline - 1].state !== undefined ? buildWithTimeline.timeline.records[indexTimeline - 1].state : undefined}></StageStatus>
-                                               {record.name}
-                                               {/*</template>*/}
-                                           </div>
-                                       </td>)
-                                   }
-                               })}
-                           </tr>)
-                       })}
-                       </tbody>
+                <h2 className="title">
+                    <div className="inner-title">{this.state.definitionName ?? 'No definition found'}</div>
+                    <div className="subtitle">{this.state.buildBranch ?? 'No branch found'}</div>
+                </h2>
 
-                   </table>
+                <div className="content">
+                    <div>
+                        <label className="label">Filter by tag: </label>
+                        <select id="build-tag-dropdown" className="dropdown">
+                            <option value="all" selected>all</option>
+                        </select>
+                    </div>
+                    <div id="build-container">
+                        <div>
+                            <table>
+                                <tbody>
+                                {this.builds.map((buildWithTimeline, index) => {
+                                    if (this.state.showStages) {
+                                        return (<tr key={index}>
+                                            <td>
+                                                <a href={buildWithTimeline.build._links.web.href} target={"_blank"}>
+                                                    {buildWithTimeline.build.buildNumber}
+                                                </a>
+                                            </td>
+                                            {buildWithTimeline.timeline.records.map((record, indexTimeline) => {
+                                                if (typeof record === undefined) {
+                                                    return (<td key={`${index}/${indexTimeline}`} colSpan={99}>
+                                                        <p> There was an error preventing the pipeline to run (invalid
+                                                            YAML, service connection not existing ...)</p>
+                                                    </td>)
+                                                } else {
+                                                    return (<td key={`${index}/${indexTimeline}`} className={"row"}>
+                                                        <div
+                                                            className={`stage ${this.getStageUnderlineClass(record.state, record.errorCount >= record.attempt, record.result)}`}>
 
+                                                            <StageStatus taskResult={record.result}
+                                                                         failed={record.errorCount >= record.attempt}
+                                                                         stageStatus={record.state === null ? undefined : record.state}
+                                                                         multiStage={buildWithTimeline.timeline.records.length > 1}
+                                                                         startTime={record.startTime === undefined ? undefined : record.startTime}
+                                                                         previousStatus={(indexTimeline > 0 && buildWithTimeline.timeline.records.length > 1 && buildWithTimeline.timeline.records[indexTimeline - 1].state !== undefined) ? buildWithTimeline.timeline.records[indexTimeline - 1].state : undefined}></StageStatus>
+                                                            {record.name}
+                                                        </div>
+                                                    </td>)
+                                                }
+                                            })}
+                                        </tr>)
+                                    } else {
+                                        return (<tr key={index}>
+                                                <td>
+                                                    <a href={buildWithTimeline.build._links.web.href} target={"_blank"}>
+                                                        {buildWithTimeline.build.buildNumber}
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    <StageStatus
+                                                        taskResult={this.getTaskResultFromBuildResult(buildWithTimeline.build.result)}
+                                                        failed={buildWithTimeline.build.result === BuildResult.Failed}
+                                                        multiStage={buildWithTimeline.timeline.records.length > 1}
+                                                    ></StageStatus>
+                                                </td>
+                                            </tr>
+                                        )
+                                    }
+                                })}
+                                </tbody>
+
+                            </table>
+
+                        </div>
+                    </div>
                 </div>
+
+            </div>
+
 
         );
     }
@@ -112,38 +212,31 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
         let buildPages = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
             undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-            settings.defaultTag === 'all' ? undefined : [settings.defaultTag], undefined, undefined, undefined,
-            undefined, undefined, undefined, undefined/*settings.buildBranch === 'all' ? undefined : [`refs/heads/${settings.buildBranch}`]*/,
+            settings.defaultTag === 'all' ? undefined : [settings.defaultTag], undefined, settings.buildCount, undefined,
+            undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : `refs/heads/${settings.buildBranch}`,
             undefined, undefined, undefined);
-        buildPages = buildPages.sort(function(a, b) {
+        buildPages = buildPages.sort(function (a, b) {
             return b.id - a.id;
         });
 
-        let builds : Build[] = [];
+        let builds: Build[] = [];
 
-        console.log(`build length: ${buildPages.length}`)
 
-        if(builds.length > settings.buildCount)
-        {
-            builds = buildPages.slice(0, settings.buildCount);
-        }
+        builds = buildPages.map(buildPage => buildPage).slice(0, settings.buildCount);
 
-        else {
-            builds = buildPages.map(buildPage => buildPage);
-        }
 
-        console.log(`build length: ${builds.length}`)
-
+        this.builds = [];
+        const tempBuilds: BuildWithTimeline[] = [];
         for (let build of builds) {
             const timeline = await buildClient.getBuildTimeline(this.projectId, build.id);
             const newBuild = new BuildWithTimeline(build, timeline);
-            newBuild.timeline.records = newBuild.timeline.records.filter(this.filterTimelineByStage).sort(function(a,b) {
+            newBuild.timeline.records = newBuild.timeline.records.filter(this.filterTimelineByStage).sort(function (a, b) {
                 return a.order - b.order;
             });
-            this.builds.push(newBuild);
-            console.log(this.builds[0].timeline.records.length)
+            tempBuilds.push(newBuild);
         }
 
+        this.builds = tempBuilds;
         this.setState(settings);
     }
 
@@ -158,20 +251,26 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         widgetSettings: Dashboard.WidgetSettings
     ): Promise<Dashboard.WidgetStatus> {
         try {
+            console.debug("Loading widget data")
             await this.setStateFromWidgetSettings(widgetSettings);
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
-            return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
+            return Dashboard.WidgetStatusHelper.Success();
+            //return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
         }
     }
 
+    //@ts-ignore
     async reload(
         widgetSettings: Dashboard.WidgetSettings
-    ): Promise<Dashboard.WidgetStatus> {
+    ): Promise<Dashboard.WidgetStatus | undefined> {
         try {
+            console.debug("Reloading widget data")
+            console.debug(JSON.stringify(widgetSettings.customSettings.data))
             await this.setStateFromWidgetSettings(widgetSettings);
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
+            console.error("Failed reloading the widget data")
             return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
         }
     }
@@ -181,57 +280,50 @@ interface IStageStatusProps {
     stageStatus?: TimelineRecordState
     previousStatus?: TimelineRecordState
     multiStage: boolean
-    startTime: Date
+    startTime?: Date
     failed: boolean
+    taskResult?: TaskResult
 }
 
 interface IStageStatusState {
     stageStatus?: TimelineRecordState
     previousStatus?: TimelineRecordState
     multiStage: boolean
-    startTime: Date
+    startTime?: Date
     failed: boolean
+    taskResult?: TaskResult
 }
 
 class StageStatus extends React.Component<IStageStatusProps, IStageStatusState> {
     constructor(props: IStageStatusProps, state: IStageStatusState) {
-        console.log(JSON.stringify(props))
         super(props);
         this.state = {
             stageStatus: props.stageStatus,
             previousStatus: props?.previousStatus,
             multiStage: props.multiStage,
-            startTime: props.startTime,
-            failed: props.failed
+            startTime: props?.startTime,
+            failed: props.failed,
+            taskResult: props.taskResult
 
         };
     }
 
     renderBadge() : ReactElement<any, any> {
-        console.log(JSON.stringify(this.state))
-        if(this.state.failed)
+
+        if(this.state.taskResult === null)
         {
-            return(
-                <Status size={StatusSize.m} {...Statuses.Failed} ></Status>
-            )
-        }
-        if(this.state.stageStatus === TimelineRecordState.Completed)
-        {
-            return(
-            <Status size={StatusSize.m} {...Statuses.Success} ></Status>);
-        }
-        else if(this.state.stageStatus === TimelineRecordState.Pending){
-            if((this.state.previousStatus === undefined && this.state.multiStage) || (this.state.previousStatus !== undefined && this.state.previousStatus !== TimelineRecordState.Completed))
+        if(this.state.stageStatus === TimelineRecordState.Pending){
+            if((this.state.previousStatus === null && this.state.multiStage) || (this.state.previousStatus !== null && this.state.previousStatus !== TimelineRecordState.Completed))
             {
                 return(
                     <Status size={StatusSize.m} {...Statuses.Queued} ></Status>
                 );
             }
             return(
-            <Status size={StatusSize.m} {...Statuses.Waiting} ></Status>)
+                <Status size={StatusSize.m} {...Statuses.Waiting} ></Status>)
         }
         else {
-            if(this.state.startTime === undefined || typeof this.state.startTime === undefined)
+            if(this.state.startTime === null || this.state.startTime === undefined || typeof this.state.startTime === undefined)
             {
                 return(<Status size={StatusSize.m}  {...Statuses.Waiting}></Status>);
             }
@@ -240,8 +332,39 @@ class StageStatus extends React.Component<IStageStatusProps, IStageStatusState> 
                 return(<Status size={StatusSize.m}  {...Statuses.Running}></Status>)
             }
             return(
-            <Status size={StatusSize.m} {...Statuses.Waiting} ></Status>)
+                <Status size={StatusSize.m} {...Statuses.Waiting} ></Status>)
         }
+        }
+
+        if(this.state.taskResult === TaskResult.Failed)
+        {
+            return(
+                <Status size={StatusSize.m} {...Statuses.Failed} ></Status>
+            )
+        }
+        if(this.state.taskResult === TaskResult.Succeeded)
+        {
+            return(
+            <Status size={StatusSize.m} {...Statuses.Success} ></Status>);
+        }
+        if(this.state.taskResult === TaskResult.SucceededWithIssues) {
+            return(
+                <Status size={StatusSize.m} {...Statuses.Warning} ></Status>);
+        }
+        if(this.state.taskResult === TaskResult.Abandoned)
+        {
+            return(
+                <Status size={StatusSize.m} {...Statuses.Canceled} ></Status>);
+        }
+        if(this.state.taskResult === TaskResult.Canceled) {
+            return(
+                <Status size={StatusSize.m} {...Statuses.Canceled} ></Status>);
+        }
+        else {
+            return(
+                <Status size={StatusSize.m} {...Statuses.Skipped} ></Status>);
+        }
+
     }
 
     render() : JSX.Element {
@@ -249,7 +372,12 @@ class StageStatus extends React.Component<IStageStatusProps, IStageStatusState> 
     }
 }
 
-ReactDOM.render(<Widget/>, document.getElementById("root"));
+const rootContainer = document.getElementById("root");
+
+const root = createRoot(rootContainer);
+
+root.render(<Widget/>);
+
 
 
 
