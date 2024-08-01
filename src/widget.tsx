@@ -278,7 +278,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         let buildPages = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
             undefined, undefined, undefined, undefined, undefined, undefined, undefined,
             settings.defaultTag === 'all' ? undefined : [settings.defaultTag], undefined, settings.buildCount, undefined,
-            undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : `refs/heads/${settings.buildBranch}`,
+            undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
             undefined, undefined, undefined);
         buildPages = buildPages.sort(function (a, b) {
             return b.id - a.id;

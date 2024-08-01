@@ -71,8 +71,11 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
      */
     private async setStateFromWidgetSettings(widgetSettings: Dashboard.WidgetSettings) {
         const settings = widgetSettings.customSettings.data;
-        const configuration = JSON.parse(settings) as WidgetConfigurationSettings;
-        if(configuration.buildDefinition)
+        const preFormattedSettings = JSON.parse(settings);
+        let postFormattedSettings = JSON.parse(settings);
+        postFormattedSettings.buildCount = parseInt(preFormattedSettings.buildCount);
+        const configuration = JSON.parse(JSON.stringify(postFormattedSettings)) as WidgetConfigurationSettings;
+
         this.setState(configuration, async () => {
                 await this.initializeState();
         });
@@ -294,10 +297,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             SDK.resize(350, 500)
             console.debug("Initializing state")
             //this.initializeState().then();
-        }
-
-    )
-
+        })
     }
 
     /**
@@ -340,8 +340,20 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
     private async validateConfiguration() : Promise<Dashboard.SaveStatus>
     {
         try {
+            var branchName = this.state.buildBranch;
+            if(branchName === "all")
+            {
+
+            }
+            else if(branchName.startsWith("refs/heads/"))
+            {
+                branchName = branchName;
+            }
+            else {
+                branchName = `refs/heads/${branchName}`;
+            }
             const configuration = new WidgetConfigurationSettings(this.state.buildDefinition,
-                this.state.buildBranch,
+                branchName,
                 this.selectedBuildDefinition.value,
                 this.state.buildCount,
                 this.state.defaultTag,
@@ -418,10 +430,10 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                 <div id={"branch"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Dropdown items={this.branchItems}
                               noItemsText={"No branch was found"}
-                              placeholder={this.state.buildBranch === "" ? "Select a branch" : this.state.buildBranch}
+                              placeholder={this.state.buildBranch === "" ? "Select a branch" : this.state.buildBranch.replace("refs/heads/", "")}
                               onSelect={this.onBranchDropdownChange}
                               disabled={this.state.isBranchDropdownDisabled}/>
-                    <Observer selectedItem={this.state.buildBranch}>
+                    <Observer selectedItem={this.state.buildBranch.replace("refs/heads/", "")}>
                         {(props: { selectedItem: string }) => {
                             return (
                                 <span style={{marginLeft: "8px", width: "150px"}}>
