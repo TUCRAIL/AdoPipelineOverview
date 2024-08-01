@@ -1,10 +1,8 @@
 import "azure-devops-ui/Core/override.css";
-// import * as SDK from "azure-devops-extension-sdk";
 import * as API from "azure-devops-extension-api";
 import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api";
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
 import React, {ReactElement} from "react";
-import * as ReactDOM from "react-dom";
 import { createRoot } from 'react-dom/client';
 import {IProps, WidgetConfigurationSettings} from "./configuration";
 import {
@@ -21,7 +19,6 @@ import SDK = require("azure-devops-extension-sdk");
 import {ZeroData} from "azure-devops-ui/ZeroData";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
-import {DropdownSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 
 
 class BuildWithTimeline {
@@ -55,14 +52,24 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         });
     }
 
+
+    /**
+     * Checks if the timeline record is a stage
+     * @param item
+     * @private
+     */
     private filterTimelineByStage(item : TimelineRecord) : boolean {
-        if(item.type === "Stage")
-        {
-            return true;
-        }
-        return false;
+        return item.type === "Stage";
+
     }
 
+    /**
+     * Get the class to apply to the stage underline based on the task result
+     * @param stageStatus The current status of the stage
+     * @param failed If the stage failed
+     * @param stageResult The result of the stage
+     * @private
+     */
     private getStageUnderlineClass(stageStatus: TimelineRecordState, failed: boolean,stageResult?: TaskResult) : string {
         if(stageResult !== undefined)
         {
@@ -102,6 +109,11 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         }
     }
 
+    /**
+     * Converts a build result into a task result
+     * @param buildResult The build result to convert
+     * @private
+     */
     private getTaskResultFromBuildResult(buildResult: BuildResult) : TaskResult {
         switch (buildResult) {
             case BuildResult.Succeeded: return TaskResult.Succeeded;
@@ -113,7 +125,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         }
     }
 
-    private onTagDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
+    private onTagDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
 
         this.setState((state, props) => ({
             defaultTag:  selectedDropdown.text === undefined ? "all" : selectedDropdown.text
@@ -122,6 +134,10 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         });
     }
 
+    /**
+     * Fills up all known tags applied to builds in the current Azure DevOps project
+     * @private
+     */
     private async fillTagsDropDown() {
         const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
         const tags = await buildClient.getTags(this.projectId);
@@ -134,7 +150,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         });
         if (tags.length > 0) {
             tags.sort().forEach(tag => {
-                const newItem : IListBoxItem<{}> = {
+                const newItem : IListBoxItem = {
                     id: tag,
                     text: tag
                 };
@@ -251,6 +267,11 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         );
     }
 
+    /**
+     * Takes the widget settings and configure the state of the component
+     * @param widgetSettings The custom settings from the widget settings
+     * @private
+     */
     private async setStateFromWidgetSettings(widgetSettings: WidgetConfigurationSettings) {
         const settings = widgetSettings;
 
@@ -286,7 +307,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
     }
 
     async preload(_widgetSettings: Dashboard.WidgetSettings) {
-        var projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
+        const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
         const projectInfo = await projectService.getProject();
         this.projectId = projectInfo?.id ?? "";
         return Dashboard.WidgetStatusHelper.Success();
