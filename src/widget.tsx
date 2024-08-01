@@ -19,6 +19,9 @@ import {
 import {Status, Statuses, StatusSize} from "azure-devops-ui/Status";
 import SDK = require("azure-devops-extension-sdk");
 import {ZeroData} from "azure-devops-ui/ZeroData";
+import {Dropdown} from "azure-devops-ui/Dropdown";
+import {IListBoxItem} from "azure-devops-ui/ListBox";
+import {DropdownSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 
 
 class BuildWithTimeline {
@@ -42,6 +45,9 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         TaskResult.Canceled,
         TaskResult.Skipped
     ]
+
+    private tagItems : IListBoxItem[] = [];
+
 
     componentDidMount() {
         SDK.init().then(() => {
@@ -107,6 +113,41 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         }
     }
 
+    private onTagDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
+
+        this.setState((state, props) => ({
+            defaultTag:  selectedDropdown.text === undefined ? "all" : selectedDropdown.text
+        }), () => {
+            this.setStateFromWidgetSettings(this.state).then();
+        });
+    }
+
+    private async fillTagsDropDown() {
+        const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
+        const tags = await buildClient.getTags(this.projectId);
+
+        console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
+        this.tagItems = [];
+        this.tagItems.push({
+            id: "all",
+            text: "all"
+        });
+        if (tags.length > 0) {
+            tags.sort().forEach(tag => {
+                const newItem : IListBoxItem<{}> = {
+                    id: tag,
+                    text: tag
+                };
+
+                this.tagItems.push(newItem);
+            });
+        }
+
+        this.setState((state, props) => ({
+            defaultTag: "all"
+        }));
+    }
+
     render(): JSX.Element {
         //if(this.state === undefined || this.state?.definitionName === null || this.state?.buildBranch === null || this.state?.buildCount === null || this.state?.defaultTag === null)
         if(!this.state)
@@ -135,9 +176,13 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
                 <div className="content">
                     <div>
                         <label className="label">Filter by tag: </label>
-                        <select id="build-tag-dropdown" className="dropdown">
-                            <option value="all" selected>all</option>
-                        </select>
+                        <Dropdown items={this.tagItems}
+                                  noItemsText={"No tag was found"}
+                                  placeholder={this.state.defaultTag === "" ? "Select a tag" : this.state.defaultTag}
+                                  onSelect={this.onTagDropdownChange}
+                                  disabled={this.tagItems.length === 0}>
+
+                        </Dropdown>
                     </div>
                     <div id="build-container">
                         <div>
@@ -206,8 +251,8 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         );
     }
 
-    private async setStateFromWidgetSettings(widgetSettings: Dashboard.WidgetSettings) {
-        const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings;
+    private async setStateFromWidgetSettings(widgetSettings: WidgetConfigurationSettings) {
+        const settings = widgetSettings;
 
         const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
         let buildPages = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
@@ -252,7 +297,9 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
     ): Promise<Dashboard.WidgetStatus> {
         try {
             console.debug("Loading widget data")
-            await this.setStateFromWidgetSettings(widgetSettings);
+            const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
+            await this.setStateFromWidgetSettings(settings);
+            await this.fillTagsDropDown();
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             return Dashboard.WidgetStatusHelper.Success();
@@ -267,7 +314,9 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         try {
             console.debug("Reloading widget data")
             console.debug(JSON.stringify(widgetSettings.customSettings.data))
-            await this.setStateFromWidgetSettings(widgetSettings);
+            const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
+
+            await this.setStateFromWidgetSettings(settings);
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             console.error("Failed reloading the widget data")
