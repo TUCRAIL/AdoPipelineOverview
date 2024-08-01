@@ -2,8 +2,10 @@
   "manifestVersion": 1,
   "id": "vsts-extensions-myExtensions",
   "version": "1.0.0",
+  "baseUri": "https://localhost:3000",
+  "public": false,
   "name": "Your extension name",
-  "description": "Show the various pipeline builds for a specific branch",
+  "description": "Your description",
   "publisher": "your-publisher-id",
   "categories": ["Azure Boards"],
   "targets": [
@@ -12,7 +14,7 @@
     }
   ],
   "icons": {
-    "default": "img/your-logo.png"
+    "default": "img/your-icon.png"
   },
   "contributions": [
     {
@@ -23,12 +25,12 @@
         "your-publisher-id.vsts-extensions-myExtensions.DeploymentsWidget.Configuration"
       ],
       "properties": {
-        "name": "Pipeline overview",
-        "description": "Widget displaying the various builds for your branch and tag",
+        "name": "Branch table widget",
+        "description": "Widget containing the various builds for the branch",
         "catalogIconUrl": "img/your-logo.png",
         "previewImageUrl": "img/your-logo.png",
         "isNameConfigurable": false,
-        "uri": "widget.html",
+        "uri": "dist/widget.html",
         "supportedSizes": [
           {
             "rowSpan": 1,
@@ -77,28 +79,14 @@
       "properties": {
         "name": "Widget Configuration",
         "description": "Configures the widget",
-        "uri": "configuration.html"
+        "uri": "dist/configuration.html"
       }
     }
   ],
   "files": [
     {
-      "path": "widget.html", "addressable": true
-    },
-    {
-      "path": "widget.css", "addressable": true
-    },
-    {
-      "path": "scripts", "addressable": true
-    },
-    {
-      "path": "sdk/scripts", "addressable": true
-    },
-    {
-      "path": "img", "addressable": true
-    },
-    {
-      "path": "configuration.html", "addressable": true
+      "path": "dist",
+      "addressable": true
     }
   ],
   "scopes":[

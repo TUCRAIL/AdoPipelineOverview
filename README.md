@@ -28,16 +28,11 @@ As such, here is a small list of improvements we would like to implement, and yo
 ### Support for multiple branch filtering
 
 Right now, this widget can only filter by a single branch. It would be better to be able to filter either:
-- All branches or one specific (similarly to tags)
 - A multi-selection of many branches
 
 ### Support for multiple tag filtering
 This is similar to the previous point. Except that a multi-selection dropdown should be implemented
 
-### Change the build count from a select box to a free input text field
-
-Right now, the build count is limited between 5 and 10. With a text field, the user could show any number of builds
-they wish
 
 ### Support for multi-stage display
 
@@ -46,4 +41,4 @@ displaying this currently. This would likely be implemented through a third part
 
 ### Better UI
 
-Regardless of the previous point. The UI is "Bare bone" and could be heavily improved.
+Regardless of the previous points. The UI is "Bare bone" and could be heavily improved.
