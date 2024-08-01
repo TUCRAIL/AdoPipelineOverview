@@ -47,7 +47,6 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
     private branchItems : IListBoxItem[] = [];
 
     private tagItems : IListBoxItem[] = [];
-    private tagSelection : DropdownSelection = new DropdownSelection();
 
     private getDataAsBuildReference(data: {}) : BuildDefinition3_2 {
         return data as BuildDefinition3_2;
@@ -288,7 +287,6 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             });
         }
 
-        this.tagSelection.select(1);
         this.setState((state, props) => ({
             defaultTag: "all"
         }));
@@ -513,6 +511,7 @@ export class WidgetConfigurationSettings {
     public buildCount: number;
     public defaultTag: string;
     public showStages: boolean;
+    //TODO: Remove this property and go back to use IConfigurationWidgetState for the configuration widget state
     public isBranchDropdownDisabled: boolean = false;
 
     constructor(buildDefinition: number, buildBranch: string, definitionName: string, buildCount: number,
