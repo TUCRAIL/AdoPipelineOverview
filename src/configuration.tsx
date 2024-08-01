@@ -12,7 +12,6 @@ import {
 } from "azure-devops-extension-api/Dashboard";
 import "azure-devops-ui/Core/override.css";
 import "./configuration.scss"
-import {DropdownSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
 import {
     BuildDefinition3_2,
@@ -74,11 +73,9 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
         const settings = widgetSettings.customSettings.data;
         const configuration = JSON.parse(settings) as WidgetConfigurationSettings;
         if(configuration.buildDefinition)
-        console.log("Configuration is before set state: " + JSON.stringify(configuration));
         this.setState(configuration, async () => {
                 await this.initializeState();
         });
-        console.log("State after set state is: " + JSON.stringify(this.state));
     }
 
     async preload(_widgetSettings: Dashboard.WidgetSettings) {
@@ -91,9 +88,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
     ): Promise<Dashboard.WidgetStatus> {
         try {
             this.widgetConfigurationContext = widgetConfigurationContext;
-            console.log("Widget settings are: " + JSON.stringify(widgetSettings));
-            this.setStateFromWidgetSettings(widgetSettings);
-            console.log("State on load is: " + JSON.stringify(this.state));
+            await this.setStateFromWidgetSettings(widgetSettings);
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             console.error()
@@ -106,7 +101,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
         widgetSettings: Dashboard.WidgetSettings
     ): Promise<Dashboard.WidgetStatus> {
         try {
-            this.setStateFromWidgetSettings(widgetSettings);
+            await this.setStateFromWidgetSettings(widgetSettings);
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
@@ -118,7 +113,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
      * @param event
      * @param selectedDropdown
      */
-    private onBuildDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
+    private onBuildDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
         this.setState((state, props) => ({
             isBranchDropdownDisabled: true,
             defaultTag: 'all',
@@ -177,12 +172,10 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
      * @param event
      * @param selectedDropdown
      */
-    private onBranchDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
-        console.log("Selected branch is: " + selectedDropdown.text);
+    private onBranchDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
         this.setState((state, props) => ({
             buildBranch: selectedDropdown.text === undefined ? "" : selectedDropdown.text
         }));
-        console.log("State after branch change is: " + JSON.stringify(this.state));
     };
 
     /**
@@ -209,18 +202,19 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
         });
 
         let foundMatchingBranch = false;
+        const RefBuildBranch = buildBranch.startsWith("refs/heads/") ? buildBranch : `refs/heads/${buildBranch}`;
 
         branchesArray.forEach(branch => {
-            const newItem : IListBoxItem<{}> = {
+            const newItem : IListBoxItem = {
                 id: branch,
                 text: branch.replace("refs/heads/", "")
             }
             this.branchItems.push(newItem)
-            console.log("comparing" + branch + "with " + buildBranch)
-            if(branch.replace("refs/heads/", "") === buildBranch)
+            console.debug("comparing" + branch + "with " + RefBuildBranch)
+            if(branch === RefBuildBranch)
             {
                 foundMatchingBranch = true;
-                console.log("Found matching branch")
+                console.debug("Found matching branch")
             }
             // if(branch === buildBranch)
             // {
@@ -255,7 +249,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
      * @param event
      * @param selectedDropdown
      */
-    private onTagDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
+    private onTagDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
 
         this.setState((state, props) => ({
             defaultTag:  selectedDropdown.text === undefined ? "all" : selectedDropdown.text
@@ -278,7 +272,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
         });
         if (tags.length > 0) {
             tags.sort().forEach(tag => {
-                const newItem : IListBoxItem<{}> = {
+                const newItem : IListBoxItem = {
                     id: tag,
                     text: tag
                 };
@@ -298,7 +292,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             SDK.register('DeploymentsWidget.Configuration', this
             )
             SDK.resize(350, 500)
-            console.log("Initializing state")
+            console.debug("Initializing state")
             //this.initializeState().then();
         }
 
@@ -311,9 +305,9 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
      * @private
      */
     private async initializeState() {
-        var projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
+        const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
         console.debug("Entered registration")
-        var project = await projectService.getProject()
+        const project = await projectService.getProject()
         console.debug(`project id is ${project?.id}`)
         this.projectId = project?.id!;
         const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
@@ -333,7 +327,6 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                 this.setState((state, props) => ({
                    isBranchDropdownDisabled: false
                 }));
-                console.log("Selected populated branch is " + this.state.buildBranch);
                 await this.fillBranchesDropDown(this.getDataAsBuildReference(definition).repository.id.toString(), this.state.buildBranch);
                 //this.buildDefinitionDropdown.current?.state.props.selection?.select(index);
             }
@@ -354,7 +347,6 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                 this.state.buildCount,
                 this.state.defaultTag,
                 this.state.showStages);
-            console.log("State before validation is: " + JSON.stringify(configuration));
             let errorMessage = "";
             if(configuration.buildDefinition === -1)
             {
@@ -382,14 +374,12 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                     data: JSON.stringify(configuration)
                 };
                 console.debug("Configuration is valid");
-                console.log("Configuration is: " + JSON.stringify(customSettings));
                 await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationChange,
                     ConfigurationEvent.Args(customSettings));
                 return  Dashboard.WidgetConfigurationSave.Valid(customSettings);
             }
         }
         catch (e) {
-            console.log("Logging error")
             console.error(e);
             return Dashboard.WidgetConfigurationSave.Invalid();
         }
@@ -401,7 +391,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
         }
         catch (e)
         {
-            console.log(e)
+            console.error(e)
         }
     }
 
