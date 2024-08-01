@@ -1,6 +1,5 @@
 import * as SDK from "azure-devops-extension-sdk";
 import * as API from "azure-devops-extension-api";
-import * as ReactDOM from "react-dom";
 import {ObservableValue} from "azure-devops-ui/Core/Observable";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import {Observer} from "azure-devops-ui/Observer";
@@ -9,9 +8,7 @@ import * as Dashboard from "azure-devops-extension-api/Dashboard";
 import React = require("react")
 import {
     ConfigurationEvent,
-    CustomSettings, IWidgetConfiguration, IWidgetConfigurationContext, SaveStatus,
-    WidgetConfigurationSave,
-    WidgetStatusHelper
+    CustomSettings, SaveStatus
 } from "azure-devops-extension-api/Dashboard";
 import "azure-devops-ui/Core/override.css";
 import "./configuration.scss"
@@ -19,15 +16,12 @@ import {DropdownSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
 import {
     BuildDefinition3_2,
-    BuildDefinitionReference, BuildDefinitionReference3_2,
-    BuildReference,
     BuildRestClient
 } from "azure-devops-extension-api/Build";
-import {GitRestClient, GitServiceIds} from "azure-devops-extension-api/Git";
+import {GitRestClient} from "azure-devops-extension-api/Git";
 import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api";
 import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
-import {useRef} from "react";
 import {createRoot} from "react-dom/client";
 
 
@@ -43,10 +37,8 @@ interface IConfigurationWidgetState {
 }
 
 
-class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetState> implements Dashboard.IWidgetConfiguration{
+class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSettings> implements Dashboard.IWidgetConfiguration{
     private projectId = "";
-
-    private buildDefinitions : BuildDefinition3_2[] | undefined;
     private buildDefinitionItems : IListBoxItem[] = [];
     private selectedBuildDefinition = new ObservableValue<string>("");
 
@@ -67,9 +59,10 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
             isBranchDropdownDisabled: true,
             buildCount: 1,
             showStages: true,
-            selectedTag: 'all',
-            selectedBuildDefinitionId: 0,
-            selectedBranch: ""
+            defaultTag: 'all',
+            buildDefinition: -1,
+            buildBranch: "",
+            definitionName: ""
         }
     }
 
@@ -78,16 +71,15 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
      * @param widgetSettings The widget settings to convert
      * @private
      */
-    private setStateFromWidgetSettings(widgetSettings: Dashboard.WidgetSettings) {
+    private async setStateFromWidgetSettings(widgetSettings: Dashboard.WidgetSettings) {
         const settings = widgetSettings.customSettings.data;
         const configuration = JSON.parse(settings) as WidgetConfigurationSettings;
-        this.setState((state, props) => ({
-            selectedBuildDefinitionId: configuration.buildDefinition,
-            selectedBranch: configuration.buildBranch,
-            buildCount: configuration.buildCount,
-            showStages: configuration.showStages,
-            selectedTag: configuration.defaultTag
-        }));
+        if(configuration.buildDefinition)
+        console.log("Configuration is before set state: " + JSON.stringify(configuration));
+        this.setState(configuration, async () => {
+                await this.initializeState();
+        });
+        console.log("State after set state is: " + JSON.stringify(this.state));
     }
 
     async preload(_widgetSettings: Dashboard.WidgetSettings) {
@@ -100,7 +92,9 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
     ): Promise<Dashboard.WidgetStatus> {
         try {
             this.widgetConfigurationContext = widgetConfigurationContext;
+            console.log("Widget settings are: " + JSON.stringify(widgetSettings));
             this.setStateFromWidgetSettings(widgetSettings);
+            console.log("State on load is: " + JSON.stringify(this.state));
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             console.error()
@@ -127,22 +121,23 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
      */
     private onBuildDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
         this.setState((state, props) => ({
-            isBranchDropdownDisabled: true
+            isBranchDropdownDisabled: true,
+            defaultTag: 'all',
+            buildBranch: "all"
         }));
         this.selectedBuildDefinition.value = selectedDropdown.text || "";
         console.debug(`Selected new build definition ${this.selectedBuildDefinition.value}`);
         this.setState((state, props) => ({
-            selectedBuildDefinitionId: this.getDataAsBuildReference(selectedDropdown.data!).id,
-            selectedBranch: ""
+            buildDefinition: this.getDataAsBuildReference(selectedDropdown.data!).id,
+            buildBranch: "all"
         }));
-
-        const currentDefinition = this.buildDefinitionItems!.find(d =>
+        this.buildDefinitionItems!.find(d =>
             Number(this.getDataAsBuildReference(d).id) === Number(this.getDataAsBuildReference(selectedDropdown.data!).id));
+        this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'all')
+            .then();
+        this.fillTagsDropDown().then();
 
-        this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'all');
-        this.fillTagsDropDown();
-
-        console.debug(`Selected new build definition ${this.state.selectedBuildDefinitionId}`);
+        console.debug(`Selected new build definition ${this.state.buildDefinition}`);
     };
 
     /**
@@ -163,7 +158,7 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
             buildCount: parseInt(newValue, 10)
 
         }));
-        this.validateConfiguration();
+        this.validateConfiguration().then();
     }
 
     /**
@@ -175,7 +170,7 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
         this.setState((state, props) => ({
             showStages: checked
         }));
-        this.validateConfiguration();
+        this.validateConfiguration().then();
     };
 
     /**
@@ -184,9 +179,11 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
      * @param selectedDropdown
      */
     private onBranchDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
+        console.log("Selected branch is: " + selectedDropdown.text);
         this.setState((state, props) => ({
-            selectedBranch: selectedDropdown.text || ""
+            buildBranch: selectedDropdown.text === undefined ? "" : selectedDropdown.text
         }));
+        console.log("State after branch change is: " + JSON.stringify(this.state));
     };
 
     /**
@@ -212,26 +209,42 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
             text: "all"
         });
 
+        let foundMatchingBranch = false;
+
         branchesArray.forEach(branch => {
             const newItem : IListBoxItem<{}> = {
                 id: branch,
                 text: branch.replace("refs/heads/", "")
             }
             this.branchItems.push(newItem)
-            if(branch === buildBranch)
+            console.log("comparing" + branch + "with " + buildBranch)
+            if(branch.replace("refs/heads/", "") === buildBranch)
             {
-                this.setState((state, props) => ({
-                    selectedBranch: branch
-                }));
+                foundMatchingBranch = true;
+                console.log("Found matching branch")
             }
-            else {
-                this.setState((state, props) => ({
-                        selectedBranch: ""
-                    }
-                ));
-            }
+            // if(branch === buildBranch)
+            // {
+            //     this.setState((state, props) => ({
+            //         buildBranch: branch
+            //     }));
+            // }
+            // else {
+            //     this.setState((state, props) => ({
+            //             buildBranch: ""
+            //         }
+            //     ));
+            // }
             console.debug("Adding branch " + branch);
         });
+
+        if(!foundMatchingBranch)
+        {
+            this.setState((state, props) => ({
+                    buildBranch: "all"
+                }
+            ));
+        }
 
         this.setState((state, props) => ({
             isBranchDropdownDisabled: false
@@ -246,7 +259,7 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
     private onTagDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem<{}>) => {
 
         this.setState((state, props) => ({
-            selectedTag: selectedDropdown.text || "all"
+            defaultTag:  selectedDropdown.text === undefined ? "all" : selectedDropdown.text
         }));
     }
 
@@ -277,7 +290,7 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
 
         this.tagSelection.select(1);
         this.setState((state, props) => ({
-            selectedTag: "all"
+            defaultTag: "all"
         }));
     }
 
@@ -287,7 +300,8 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
             SDK.register('DeploymentsWidget.Configuration', this
             )
             SDK.resize(350, 500)
-            this.initializeState();
+            console.log("Initializing state")
+            //this.initializeState().then();
         }
 
     )
@@ -315,13 +329,14 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
                 text: definition.name,
                 data: definition
             });
-            if(definition.id === this.state.selectedBuildDefinitionId)
+            if(definition.id === this.state.buildDefinition)
             {
                 this.selectedBuildDefinition.value = definition.name;
                 this.setState((state, props) => ({
                    isBranchDropdownDisabled: false
                 }));
-                await this.fillBranchesDropDown(this.getDataAsBuildReference(definition).repository.id.toString(), this.state.selectedBranch);
+                console.log("Selected populated branch is " + this.state.buildBranch);
+                await this.fillBranchesDropDown(this.getDataAsBuildReference(definition).repository.id.toString(), this.state.buildBranch);
                 //this.buildDefinitionDropdown.current?.state.props.selection?.select(index);
             }
         });
@@ -334,50 +349,63 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
      */
     private async validateConfiguration() : Promise<Dashboard.SaveStatus>
     {
-        const configuration = new WidgetConfigurationSettings(this.state.selectedBuildDefinitionId,
-            this.state.selectedBranch,
-            this.selectedBuildDefinition.value,
-            this.state.buildCount,
-            this.state.selectedTag,
-            this.state.showStages);
-        let errorMessage = "";
-        if(configuration.buildDefinition === 0)
-        {
-            errorMessage += "The build definition selected is invalid \n";
+        try {
+            const configuration = new WidgetConfigurationSettings(this.state.buildDefinition,
+                this.state.buildBranch,
+                this.selectedBuildDefinition.value,
+                this.state.buildCount,
+                this.state.defaultTag,
+                this.state.showStages);
+            console.log("State before validation is: " + JSON.stringify(configuration));
+            let errorMessage = "";
+            if(configuration.buildDefinition === -1)
+            {
+                errorMessage += "The build definition selected is invalid \n";
+            }
+            if(configuration.buildBranch === "")
+            {
+                errorMessage += "The branch selected is invalid \n";
+            }
+            if(configuration.buildCount < 1 || configuration.buildCount > 50)
+            {
+                errorMessage += "The number of builds to show must be between 1 and 50 \n";
+            }
+            if(errorMessage !== "")
+            {
+                console.debug("Invalid configuration: \n" +
+                    errorMessage);
+                return Dashboard.WidgetConfigurationSave.Invalid();
+                // await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationError, {
+                //     data: errorMessage
+                // });
+            }
+            else {
+                const customSettings: CustomSettings = {
+                    data: JSON.stringify(configuration)
+                };
+                console.debug("Configuration is valid");
+                console.log("Configuration is: " + JSON.stringify(customSettings));
+                await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationChange,
+                    ConfigurationEvent.Args(customSettings));
+                return  Dashboard.WidgetConfigurationSave.Valid(customSettings);
+            }
         }
-        if(configuration.buildBranch === "")
-        {
-            errorMessage += "The branch selected is invalid \n";
-        }
-        if(configuration.buildCount < 1 || configuration.buildCount > 50)
-        {
-            errorMessage += "The number of builds to show must be between 1 and 50 \n";
-        }
-        if(errorMessage !== "")
-        {
-            console.debug("Invalid configuration: \n" +
-            errorMessage);
+        catch (e) {
+            console.log("Logging error")
+            console.error(e);
             return Dashboard.WidgetConfigurationSave.Invalid();
-            // await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationError, {
-            //     data: errorMessage
-            // });
-        }
-        else {
-            const customSettings: CustomSettings = {
-                data: JSON.stringify(configuration)
-            };
-            console.debug("Configuration is valid");
-            await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationChange,
-                ConfigurationEvent.Args(customSettings));
-            return  Dashboard.WidgetConfigurationSave.Valid(customSettings);
         }
     }
 
-    // Validate configuration on each change in the widget
-    componentDidUpdate(prevProps: Readonly<IProps>, prevState: Readonly<IConfigurationWidgetState>, snapshot?: any) {
-        this.validateConfiguration();
+    componentDidUpdate(prevProps: Readonly<IProps>, prevState: Readonly<WidgetConfigurationSettings>, snapshot?: any) {
+        try {
+            this.validateConfiguration().then();
+        }
+        catch (e)
+        {
+            console.log(e)
+        }
     }
-
 
     public render() {
         return this.state && (
@@ -385,7 +413,7 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
                 <div id={"build_definition"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Dropdown items={this.buildDefinitionItems}
                               noItemsText={"No build definition was found"}
-                              placeholder={this.state.selectedBuildDefinitionId === 0 ? "Select a build definition" : this.selectedBuildDefinition.value}
+                              placeholder={this.state.buildDefinition === 0 ? "Select a build definition" : this.selectedBuildDefinition.value}
                               onSelect={this.onBuildDropdownChange}
 
                     required={true}/>
@@ -403,10 +431,10 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
                 <div id={"branch"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Dropdown items={this.branchItems}
                               noItemsText={"No branch was found"}
-                              placeholder={this.state.selectedBranch === "" ? "Select a branch" : this.state.selectedBranch}
+                              placeholder={this.state.buildBranch === "" ? "Select a branch" : this.state.buildBranch}
                               onSelect={this.onBranchDropdownChange}
                               disabled={this.state.isBranchDropdownDisabled}/>
-                    <Observer selectedItem={this.state.selectedBranch}>
+                    <Observer selectedItem={this.state.buildBranch}>
                         {(props: { selectedItem: string }) => {
                             return (
                                 <span style={{marginLeft: "8px", width: "150px"}}>
@@ -437,10 +465,10 @@ class ConfigurationWidget extends React.Component<IProps, IConfigurationWidgetSt
                 <div id={"tags"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Dropdown items={this.tagItems}
                               noItemsText={"No tag was found"}
-                              placeholder={this.state.selectedTag === "" ? "Select a tag" : this.state.selectedTag}
+                              placeholder={this.state.defaultTag === "" ? "Select a tag" : this.state.defaultTag}
                               onSelect={this.onTagDropdownChange}
-                              disabled={this.state.selectedBuildDefinitionId === 0}/>
-                    <Observer selectedItem={this.state.selectedTag}>
+                              disabled={this.state.buildDefinition === 0}/>
+                    <Observer selectedItem={this.state.defaultTag}>
                         {(props: { selectedItem: string }) => {
                             return (
                                 <span style={{marginLeft: "8px", width: "150px"}}>
@@ -485,6 +513,7 @@ export class WidgetConfigurationSettings {
     public buildCount: number;
     public defaultTag: string;
     public showStages: boolean;
+    public isBranchDropdownDisabled: boolean = false;
 
     constructor(buildDefinition: number, buildBranch: string, definitionName: string, buildCount: number,
                 defaultTag: string, showStages: boolean) {
@@ -497,9 +526,6 @@ export class WidgetConfigurationSettings {
     }
 
 }
-
-
-console.log('host is init')
 
 const rootContainer = document.getElementById("root");
 

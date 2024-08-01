@@ -10,6 +10,7 @@
     "rootDir": "src/",
     "outDir": "dist/",
     "jsx": "react",
+    "strictNullChecks": true,
     "lib": [
       "es5",
       "es6",
