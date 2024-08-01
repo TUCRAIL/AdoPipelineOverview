@@ -125,11 +125,11 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         }
     }
 
-    private onTagDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+    private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
 
-        this.setState((state, props) => ({
+        this.setState( {
             defaultTag:  selectedDropdown.text === undefined ? "all" : selectedDropdown.text
-        }), () => {
+        }, () => {
             this.setStateFromWidgetSettings(this.state).then();
         });
     }
@@ -159,13 +159,12 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             });
         }
 
-        this.setState((state, props) => ({
+        this.setState({
             defaultTag: "all"
-        }));
+        });
     }
 
     render(): JSX.Element {
-        //if(this.state === undefined || this.state?.definitionName === null || this.state?.buildBranch === null || this.state?.buildCount === null || this.state?.defaultTag === null)
         if(!this.state)
         {
             return (<div>
@@ -285,7 +284,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             return b.id - a.id;
         });
 
-        let builds: Build[] = [];
+        let builds: Build[];
 
 
         builds = buildPages.map(buildPage => buildPage).slice(0, settings.buildCount);
@@ -365,7 +364,7 @@ interface IStageStatusState {
 }
 
 class StageStatus extends React.Component<IStageStatusProps, IStageStatusState> {
-    constructor(props: IStageStatusProps, state: IStageStatusState) {
+    constructor(props: IStageStatusProps) {
         super(props);
         this.state = {
             stageStatus: props.stageStatus,

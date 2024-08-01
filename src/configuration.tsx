@@ -110,21 +110,21 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
 
     /**
      * Event handler for when the build definition dropdown is changed
-     * @param event
+     * @param _event
      * @param selectedDropdown
      */
-    private onBuildDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
-        this.setState((state, props) => ({
+    private onBuildDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+        this.setState({
             isBranchDropdownDisabled: true,
             defaultTag: 'all',
             buildBranch: "all"
-        }));
+        });
         this.selectedBuildDefinition.value = selectedDropdown.text || "";
         console.debug(`Selected new build definition ${this.selectedBuildDefinition.value}`);
-        this.setState((state, props) => ({
+        this.setState({
             buildDefinition: this.getDataAsBuildReference(selectedDropdown.data!).id,
             buildBranch: "all"
-        }));
+        });
         this.buildDefinitionItems!.find(d =>
             Number(this.getDataAsBuildReference(d).id) === Number(this.getDataAsBuildReference(selectedDropdown.data!).id));
         this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'all')
@@ -136,10 +136,10 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
 
     /**
      * Event handler for when the build count is changed. Also controls the min and max value of the input field
-     * @param event
+     * @param _event
      * @param newValue
      */
-    private onBuildCountChanged = (event:  React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, newValue : string) => {
+    private onBuildCountChanged = (_event:  React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, newValue : string) => {
         if(isNaN(parseInt(newValue, 10)))
         {
             return;
@@ -148,34 +148,34 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
         {
             return;
         }
-        this.setState((state, props) => ({
+        this.setState({
             buildCount: parseInt(newValue, 10)
 
-        }));
+        });
         this.validateConfiguration().then();
     }
 
     /**
      * Event handler for when the show stages checkbox is changed
-     * @param event
+     * @param _event
      * @param checked
      */
-    private onShowStagesChanged = (event: (React.MouseEvent<HTMLElement, MouseEvent> | React.KeyboardEvent<HTMLElement>), checked: boolean) => {
-        this.setState((state, props) => ({
+    private onShowStagesChanged = (_event: (React.MouseEvent<HTMLElement, MouseEvent> | React.KeyboardEvent<HTMLElement>), checked: boolean) => {
+        this.setState({
             showStages: checked
-        }));
+        });
         this.validateConfiguration().then();
     };
 
     /**
      * Event handler for when the branch dropdown is changed
-     * @param event
+     * @param _event
      * @param selectedDropdown
      */
-    private onBranchDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
-        this.setState((state, props) => ({
+    private onBranchDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+        this.setState({
             buildBranch: selectedDropdown.text === undefined ? "" : selectedDropdown.text
-        }));
+        });
     };
 
     /**
@@ -233,27 +233,27 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
 
         if(!foundMatchingBranch)
         {
-            this.setState((state, props) => ({
+            this.setState({
                     buildBranch: "all"
                 }
-            ));
+            );
         }
 
-        this.setState((state, props) => ({
+        this.setState({
             isBranchDropdownDisabled: false
-        }));
+        });
     }
 
     /**
      * Event handler for when the tag dropdown is changed
-     * @param event
+     * @param _event
      * @param selectedDropdown
      */
-    private onTagDropdownChange = (event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+    private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
 
-        this.setState((state, props) => ({
+        this.setState({
             defaultTag:  selectedDropdown.text === undefined ? "all" : selectedDropdown.text
-        }));
+        });
     }
 
     /**
@@ -281,9 +281,9 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             });
         }
 
-        this.setState((state, props) => ({
+        this.setState({
             defaultTag: "all"
-        }));
+        });
     }
 
     public componentDidMount() {
@@ -315,7 +315,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             undefined, undefined, undefined, undefined, true, undefined, undefined);
 
 
-        buildDefinitions.forEach(async (definition, index) => {
+        await Promise.all(buildDefinitions.map(async (definition) => {
             this.buildDefinitionItems.push({
                 id: definition.id.toString(),
                 text: definition.name,
@@ -324,13 +324,12 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             if(definition.id === this.state.buildDefinition)
             {
                 this.selectedBuildDefinition.value = definition.name;
-                this.setState((state, props) => ({
-                   isBranchDropdownDisabled: false
-                }));
+                this.setState({
+                    isBranchDropdownDisabled: false
+                });
                 await this.fillBranchesDropDown(this.getDataAsBuildReference(definition).repository.id.toString(), this.state.buildBranch);
-                //this.buildDefinitionDropdown.current?.state.props.selection?.select(index);
             }
-        });
+        }));
 
     }
 
@@ -385,7 +384,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
         }
     }
 
-    componentDidUpdate(prevProps: Readonly<IProps>, prevState: Readonly<WidgetConfigurationSettings>, snapshot?: any) {
+    componentDidUpdate(_prevProps: Readonly<IProps>, _prevState: Readonly<WidgetConfigurationSettings>, _snapshot?: any) {
         try {
             this.validateConfiguration().then();
         }
