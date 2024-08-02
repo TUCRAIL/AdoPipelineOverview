@@ -299,9 +299,25 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             });
         }
 
-        this.setState({
-            defaultTag: "all"
-        });
+        if(this.state.defaultTag !== "all" && this.state.defaultTag !== "")
+        {
+            const tagArray = this.state.defaultTag.split(",");
+            for (const tag of tagArray) {
+                const index = this.tagItems.findIndex((item) => item.id === tag);
+                if (index !== -1) {
+                    this.tagDropdownMultiSelection.select(index, undefined, true, true);
+                }
+            }
+            this.setState({
+                defaultTag: this.state.defaultTag
+            })
+        }
+        else {
+            this.setState({
+                defaultTag: "all"
+            });
+        }
+
     }
 
     public componentDidMount() {
@@ -343,8 +359,10 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                     isBranchDropdownDisabled: false
                 });
                 await this.fillBranchesDropDown(this.getDataAsBuildReference(definition).repository.id.toString(), this.state.buildBranch);
+                await this.fillTagsDropDown();
             }
         }));
+
 
     }
 

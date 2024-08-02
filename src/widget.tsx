@@ -174,9 +174,27 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             });
         }
 
-        this.setState({
-            defaultTag: "all"
-        });
+        console.log("tags are: ", this.tagItems);
+
+        if(this.state.defaultTag !== "all" && this.state.defaultTag !== "")
+        {
+            const tagArray = this.state.defaultTag.split(",");
+            for (const tag of tagArray) {
+                const index = this.tagItems.findIndex((item) => item.id === tag);
+                if (index !== -1) {
+                    this.tagDropdownMultiSelection.select(index, undefined, true, true);
+                }
+            }
+            this.setState({
+                defaultTag: this.state.defaultTag
+            })
+        }
+    else {
+            this.setState({
+                defaultTag: "all"
+            });
+        }
+
     }
 
     render(): JSX.Element {
