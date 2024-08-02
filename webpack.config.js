@@ -67,7 +67,8 @@ module.exports = {
         new CopyWebpackPlugin({
             patterns: [
                 { from: "**/*.html", context: "src" },
-                { from: "**/*.css", context: "src" }
+                { from: "**/*.css", context: "src" },
+                { from: "**/*.scss", context: "src" }
             ]
         })
     ]
