@@ -21,6 +21,7 @@ import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
 import {ISelectionRange} from "azure-devops-ui/Utilities/Selection";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
+import {PagedList} from "azure-devops-extension-api/WebApi";
 
 
 class BuildWithTimeline {
@@ -159,10 +160,6 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
 
         console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
         this.tagItems = [];
-        this.tagItems.push({
-            id: "all",
-            text: "all"
-        });
         if (tags.length > 0) {
             tags.sort().forEach(tag => {
                 const newItem : IListBoxItem = {
@@ -173,8 +170,6 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
                 this.tagItems.push(newItem);
             });
         }
-
-        console.log("tags are: ", this.tagItems);
 
         if(this.state.defaultTag !== "all" && this.state.defaultTag !== "")
         {
@@ -195,6 +190,16 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             });
         }
 
+    }
+
+    private clearTagDropdownSelection()
+    {
+        this.tagDropdownMultiSelection.clear();
+        this.setState({
+            defaultTag: "all"
+        }, async () => {
+          await this.setStateFromWidgetSettings(this.state);
+        });
     }
 
     render(): JSX.Element {
@@ -222,14 +227,26 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
                 </h2>
 
                 <div className="content">
-                    <div>
+                    <div className={"widget-tag-container"}>
                         <label className="label">Filter by tag: </label>
                         <Dropdown items={this.tagItems}
+                                  actions={[
+                                      {
+                                          className: "bolt-dropdown-action-right-button",
+                                          disabled: this.tagDropdownMultiSelection.selectedCount === 0,
+                                          iconProps: { iconName: "Clear" },
+                                          text: "Clear",
+                                          onClick: () => {
+                                              this.clearTagDropdownSelection();
+                                          }
+                                      }
+                                  ]}
                                   noItemsText={"No tag was found"}
                                   placeholder={this.state.defaultTag === "" ? "Select a tag" : this.state.defaultTag}
                                   onSelect={this.onTagDropdownChange}
                                   selection={this.tagDropdownMultiSelection}
-                                  disabled={this.tagItems.length === 0}>
+                                  className={"widget-tag-dropdown"}
+                                  >
 
                         </Dropdown>
                     </div>
@@ -309,14 +326,33 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         const settings = widgetSettings;
 
         const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
-        let buildPages = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
-            undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-            settings.defaultTag === 'all' ? undefined : settings.defaultTag.split(','), undefined, settings.buildCount, undefined,
-            undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
-            undefined, undefined, undefined);
+        let buildPages: Build[] = [];
+        if(settings !== undefined && settings.matchAnyTag)
+        {
+            for(let tag of settings.defaultTag.split(',')) {
+                let buildPage = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
+                    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+                    settings.defaultTag === 'all' ? undefined : [tag], undefined, settings.buildCount, undefined,
+                    undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
+                    undefined, undefined, undefined);
+                buildPages = buildPages.concat(buildPage);
+            }
+        }
+        else {
+            let buildPage = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
+                undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+                settings.defaultTag === 'all' ? undefined : settings.defaultTag.split(','), undefined, settings.buildCount, undefined,
+                undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
+                undefined, undefined, undefined);
+            buildPages = buildPages.concat(buildPage);
+        }
+        buildPages = buildPages.filter((value, index, self) => self.indexOf(value) === index);
+
+
         buildPages = buildPages.sort(function (a, b) {
             return b.id - a.id;
         });
+
 
         let builds: Build[];
 

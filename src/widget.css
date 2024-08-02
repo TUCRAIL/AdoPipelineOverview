@@ -2,6 +2,10 @@
     0% { transform: rotate(0deg); }
     100% {  transform: rotate(359deg); }
 }
+#root {
+    width: 100%;
+}
+
 .spinner {
     animation: spin 6s linear infinite;
     mask-size: cover;
@@ -124,4 +128,16 @@ a {
 
 #build-tag-dropdown {
     margin-top: 10px;
+}
+
+.widget-tag-container {
+
+    width: 100%;
+}
+
+.widget-tag-dropdown {
+    float: right;
+    margin: 1em;
+    width: 15em;
+    float: right;
 }

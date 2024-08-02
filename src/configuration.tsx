@@ -2,7 +2,7 @@ import * as SDK from "azure-devops-extension-sdk";
 import * as API from "azure-devops-extension-api";
 import {ObservableValue} from "azure-devops-ui/Core/Observable";
 import {Dropdown} from "azure-devops-ui/Dropdown";
-import {Observer} from "azure-devops-ui/Observer";
+import { Toggle } from "azure-devops-ui/Toggle";
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
 
 import React = require("react")
@@ -23,7 +23,6 @@ import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
 import {createRoot} from "react-dom/client";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
-import {ISelectionRange} from "azure-devops-ui/Utilities/Selection";
 
 
 export interface IProps {}
@@ -63,7 +62,8 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             defaultTag: 'all',
             buildDefinition: -1,
             buildBranch: "",
-            definitionName: ""
+            definitionName: "",
+            matchAnyTag: false
         }
     }
 
@@ -77,11 +77,22 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
         const preFormattedSettings = JSON.parse(settings);
         let postFormattedSettings = JSON.parse(settings);
         postFormattedSettings.buildCount = parseInt(preFormattedSettings.buildCount);
-        const configuration = JSON.parse(JSON.stringify(postFormattedSettings)) as WidgetConfigurationSettings;
+        const configuration = new WidgetConfigurationSettings(
+            postFormattedSettings.buildDefinition,
+            postFormattedSettings.buildBranch,
+            postFormattedSettings.definitionName,
+            postFormattedSettings.buildCount,
+            postFormattedSettings.defaultTag,
+            postFormattedSettings.showStages,
+            postFormattedSettings.isBranchDropdownDisabled,
+            postFormattedSettings.matchAnyTag
+        );
+
 
         this.setState(configuration, async () => {
                 await this.initializeState();
         });
+
     }
 
     async preload(_widgetSettings: Dashboard.WidgetSettings) {
@@ -253,9 +264,9 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
     /**
      * Event handler for when the tag dropdown is changed
      * @param _event
-     * @param selectedDropdown
+     * @param _selectedDropdown
      */
-    private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+    private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
 
         let newTagState = "";
         for(let i = 0;  i < this.tagDropdownMultiSelection.value.length;i++) {
@@ -284,10 +295,6 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
 
         console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
         this.tagItems = [];
-        this.tagItems.push({
-            id: "all",
-            text: "all"
-        });
         if (tags.length > 0) {
             tags.sort().forEach(tag => {
                 const newItem : IListBoxItem = {
@@ -318,6 +325,20 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             });
         }
 
+    }
+
+    private clearTagDropdownSelection()
+    {
+        this.tagDropdownMultiSelection.clear();
+        this.setState({
+            defaultTag: "all"
+        });
+    }
+
+    private onTagToggleChange = (_event: React.SyntheticEvent<HTMLElement>, checked: boolean) => {
+        this.setState({
+            matchAnyTag: this.state.matchAnyTag === undefined ? true : checked
+        })
     }
 
     public componentDidMount() {
@@ -362,8 +383,6 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                 await this.fillTagsDropDown();
             }
         }));
-
-
     }
 
     /**
@@ -373,24 +392,20 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
     private async validateConfiguration() : Promise<Dashboard.SaveStatus>
     {
         try {
-            var branchName = this.state.buildBranch;
+            let branchName = this.state.buildBranch;
             if(branchName === "all")
             {
 
             }
             else if(branchName.startsWith("refs/heads/"))
             {
-                branchName = branchName;
+
             }
             else {
                 branchName = `refs/heads/${branchName}`;
             }
-            const configuration = new WidgetConfigurationSettings(this.state.buildDefinition,
-                branchName,
-                this.selectedBuildDefinition.value,
-                this.state.buildCount,
-                this.state.defaultTag,
-                this.state.showStages);
+            let configuration = JSON.parse(JSON.stringify(this.state)) as WidgetConfigurationSettings;
+            configuration.buildBranch = branchName;
             let errorMessage = "";
             if(configuration.buildDefinition === -1)
             {
@@ -449,15 +464,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                               onSelect={this.onBuildDropdownChange}
 
                     required={true}/>
-                    <Observer selectedItem={this.selectedBuildDefinition}>
-                        {(props: { selectedItem: string }) => {
-                            return (
-                                <span style={{marginLeft: "8px", width: "150px"}}>
-                                Selected Item: {props.selectedItem}{" "}
-                            </span>
-                            );
-                        }}
-                    </Observer>
+
                 </div>
 
                 <div id={"branch"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
@@ -466,15 +473,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                               placeholder={this.state.buildBranch === "" ? "Select a branch" : this.state.buildBranch.replace("refs/heads/", "")}
                               onSelect={this.onBranchDropdownChange}
                               disabled={this.state.isBranchDropdownDisabled}/>
-                    <Observer selectedItem={this.state.buildBranch.replace("refs/heads/", "")}>
-                        {(props: { selectedItem: string }) => {
-                            return (
-                                <span style={{marginLeft: "8px", width: "150px"}}>
-                                Selected Item: {props.selectedItem}{" "}
-                            </span>
-                            );
-                        }}
-                    </Observer>
+
                 </div>
                 <div id={"build_count"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <TextField
@@ -482,34 +481,34 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                         inputType={"number"}
                         onChange={this.onBuildCountChanged}
                         required={true}
-                        label={"Builds to show"}
-/>
-                    <Observer selectedItem={this.state.buildCount.toString()}>
-                        {(props: { selectedItem: string }) => {
-                            return (
-                                <span style={{marginLeft: "8px", width: "150px"}}>
-                                Selected Item: {props.selectedItem}{" "}
-                            </span>
-                            );
-                        }}
-                    </Observer>
+                        label={"Builds to show"}/>
+
                 </div>
                 <div id={"tags"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Dropdown items={this.tagItems}
+                              actions={[
+                                  {
+                                      className: "bolt-dropdown-action-right-button",
+                                      disabled: this.tagDropdownMultiSelection.selectedCount === 0,
+                                      iconProps: { iconName: "Clear" },
+                                      text: "Clear",
+                                      onClick: () => {
+                                          this.clearTagDropdownSelection();
+                                      }
+                                  }
+                              ]}
                               noItemsText={"No tag was found"}
                               placeholder={this.state.defaultTag === "" ? "Select a tag" : this.state.defaultTag}
                               onSelect={this.onTagDropdownChange}
                               selection={this.tagDropdownMultiSelection}
-                              disabled={this.state.buildDefinition === 0}/>
-                    <Observer selectedItem={this.state.defaultTag}>
-                        {(props: { selectedItem: string }) => {
-                            return (
-                                <span style={{marginLeft: "8px", width: "150px"}}>
-                                Selected Tag: {props.selectedItem}{" "}
-                            </span>
-                            );
-                        }}
-                    </Observer>
+                              />
+
+                    <Toggle offText={"Match all"}
+                            onText={"Match any"}
+                            checked={this.state.matchAnyTag}
+                            onChange={this.onTagToggleChange }>
+                    </Toggle>
+
                 </div>
                 <div id={"show stages"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Checkbox
@@ -517,15 +516,6 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                         onChange={this.onShowStagesChanged}
                         label={"Show Stages"}
                     ></Checkbox>
-                    <Observer selectedItem={this.state.showStages}>
-                        {(props: { selectedItem: boolean }) => {
-                            return (
-                                <span style={{marginLeft: "8px", width: "150px"}}>
-                                Selected Item: {props.selectedItem.toString()}{" "}
-                            </span>
-                            );
-                        }}
-                    </Observer>
                 </div>
 
 
@@ -548,15 +538,18 @@ export class WidgetConfigurationSettings {
     public showStages: boolean;
     //TODO: Remove this property and go back to use IConfigurationWidgetState for the configuration widget state
     public isBranchDropdownDisabled: boolean = false;
+    public matchAnyTag: boolean = false;
 
     constructor(buildDefinition: number, buildBranch: string, definitionName: string, buildCount: number,
-                defaultTag: string, showStages: boolean) {
+                defaultTag: string, showStages: boolean, isBranchDropdownDisabled?: boolean, matchAnyTag?: boolean) {
         this.buildDefinition = buildDefinition;
         this.buildBranch = buildBranch;
         this.definitionName = definitionName;
         this.buildCount = buildCount;
         this.defaultTag = defaultTag;
         this.showStages = showStages;
+        this.isBranchDropdownDisabled = isBranchDropdownDisabled === undefined ? false : isBranchDropdownDisabled;
+        this.matchAnyTag = matchAnyTag === undefined ? false : matchAnyTag;
     }
 
 }
