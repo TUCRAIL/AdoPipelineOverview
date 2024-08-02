@@ -130,6 +130,10 @@ a {
     margin-top: 10px;
 }
 
+.dropdown-element {
+    margin:  1em;
+}
+
 .widget-tag-container {
 
     width: 100%;
@@ -137,7 +141,5 @@ a {
 
 .widget-tag-dropdown {
     float: right;
-    margin: 1em;
     width: 15em;
-    float: right;
 }

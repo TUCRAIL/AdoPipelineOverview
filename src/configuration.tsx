@@ -23,6 +23,7 @@ import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
 import {createRoot} from "react-dom/client";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
+import {Label} from "azure-devops-ui/Label";
 
 
 export interface IProps {}
@@ -458,8 +459,10 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
         return this.state && (
             <div>
                 <div id={"build_definition"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
+                    <label>Build Definition: </label>
                     <Dropdown items={this.buildDefinitionItems}
                               noItemsText={"No build definition was found"}
+                              className={"dropdown-element"}
                               placeholder={this.state.buildDefinition === 0 ? "Select a build definition" : this.selectedBuildDefinition.value}
                               onSelect={this.onBuildDropdownChange}
 
@@ -468,8 +471,10 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                 </div>
 
                 <div id={"branch"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
+                    <label>Branch: </label>
                     <Dropdown items={this.branchItems}
                               noItemsText={"No branch was found"}
+                              className={"dropdown-element"}
                               placeholder={this.state.buildBranch === "" ? "Select a branch" : this.state.buildBranch.replace("refs/heads/", "")}
                               onSelect={this.onBranchDropdownChange}
                               disabled={this.state.isBranchDropdownDisabled}/>
@@ -481,11 +486,14 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                         inputType={"number"}
                         onChange={this.onBuildCountChanged}
                         required={true}
+                        className={"dropdown-element"}
                         label={"Builds to show"}/>
 
                 </div>
                 <div id={"tags"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
+                    <label>Tags: </label>
                     <Dropdown items={this.tagItems}
+                              className={"dropdown-element"}
                               actions={[
                                   {
                                       className: "bolt-dropdown-action-right-button",
@@ -513,6 +521,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                 <div id={"show stages"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Checkbox
                         checked={this.state.showStages}
+                        className={"dropdown-element"}
                         onChange={this.onShowStagesChanged}
                         label={"Show Stages"}
                     ></Checkbox>

@@ -19,9 +19,7 @@ import SDK = require("azure-devops-extension-sdk");
 import {ZeroData} from "azure-devops-ui/ZeroData";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
-import {ISelectionRange} from "azure-devops-ui/Utilities/Selection";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
-import {PagedList} from "azure-devops-extension-api/WebApi";
 
 
 class BuildWithTimeline {
@@ -129,7 +127,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         }
     }
 
-    private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+    private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
 
         let newTagState = "";
         for(let i = 0;  i < this.tagDropdownMultiSelection.value.length;i++) {
@@ -245,7 +243,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
                                   placeholder={this.state.defaultTag === "" ? "Select a tag" : this.state.defaultTag}
                                   onSelect={this.onTagDropdownChange}
                                   selection={this.tagDropdownMultiSelection}
-                                  className={"widget-tag-dropdown"}
+                                  className={"widget-tag-dropdown dropdown-element"}
                                   >
 
                         </Dropdown>
