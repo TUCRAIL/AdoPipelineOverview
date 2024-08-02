@@ -39,7 +39,7 @@
     "base64-inline-loader": "^2.0.1",
     "copy-webpack-plugin": "^7.0.0",
     "cross-env": "^7.0.3",
-    "css-loader": "^6.7.1",
+    "css-loader": "^7.1.2",
     "rimraf": "^5.0.5",
     "sass": "^1.62.1",
     "sass-loader": "^14.1.1",
