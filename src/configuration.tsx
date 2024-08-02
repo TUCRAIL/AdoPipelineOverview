@@ -22,6 +22,8 @@ import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api"
 import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
 import {createRoot} from "react-dom/client";
+import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
+import {ISelectionRange} from "azure-devops-ui/Utilities/Selection";
 
 
 export interface IProps {}
@@ -40,6 +42,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
     private projectId = "";
     private buildDefinitionItems : IListBoxItem[] = [];
     private selectedBuildDefinition = new ObservableValue<string>("");
+    private tagDropdownMultiSelection = new DropdownMultiSelection();
 
     private widgetConfigurationContext?: Dashboard.IWidgetConfigurationContext;
 
@@ -254,8 +257,20 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
      */
     private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
 
+        let newTagState = "";
+        for(let i = 0;  i < this.tagDropdownMultiSelection.value.length;i++) {
+            const selectionRange = this.tagDropdownMultiSelection.value[i];
+            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++)
+            {
+                newTagState += this.tagItems[j].id + ",";
+            }
+        }
+        if(newTagState.endsWith(','))
+        {
+            newTagState = newTagState.substring(0, newTagState.length - 1);
+        }
         this.setState({
-            defaultTag:  selectedDropdown.text === undefined ? "all" : selectedDropdown.text
+            defaultTag:  newTagState === "" ? "all" : newTagState
         });
     }
 
@@ -466,6 +481,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
                               noItemsText={"No tag was found"}
                               placeholder={this.state.defaultTag === "" ? "Select a tag" : this.state.defaultTag}
                               onSelect={this.onTagDropdownChange}
+                              selection={this.tagDropdownMultiSelection}
                               disabled={this.state.buildDefinition === 0}/>
                     <Observer selectedItem={this.state.defaultTag}>
                         {(props: { selectedItem: string }) => {

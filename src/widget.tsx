@@ -19,6 +19,8 @@ import SDK = require("azure-devops-extension-sdk");
 import {ZeroData} from "azure-devops-ui/ZeroData";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
+import {ISelectionRange} from "azure-devops-ui/Utilities/Selection";
+import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 
 
 class BuildWithTimeline {
@@ -43,6 +45,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         TaskResult.Skipped
     ]
 
+    private tagDropdownMultiSelection = new DropdownMultiSelection();
     private tagItems : IListBoxItem[] = [];
 
 
@@ -127,10 +130,22 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
 
     private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
 
-        this.setState( {
-            defaultTag:  selectedDropdown.text === undefined ? "all" : selectedDropdown.text
-        }, () => {
-            this.setStateFromWidgetSettings(this.state).then();
+        let newTagState = "";
+        for(let i = 0;  i < this.tagDropdownMultiSelection.value.length;i++) {
+            const selectionRange = this.tagDropdownMultiSelection.value[i];
+            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++)
+            {
+                newTagState += this.tagItems[j].id + ",";
+            }
+        }
+        if(newTagState.endsWith(','))
+        {
+            newTagState = newTagState.substring(0, newTagState.length - 1);
+        }
+        this.setState({
+            defaultTag:  newTagState === "" ? "all" : newTagState
+        }, async () => {
+            await this.setStateFromWidgetSettings(this.state);
         });
     }
 
@@ -195,6 +210,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
                                   noItemsText={"No tag was found"}
                                   placeholder={this.state.defaultTag === "" ? "Select a tag" : this.state.defaultTag}
                                   onSelect={this.onTagDropdownChange}
+                                  selection={this.tagDropdownMultiSelection}
                                   disabled={this.tagItems.length === 0}>
 
                         </Dropdown>
@@ -277,7 +293,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
         let buildPages = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
             undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-            settings.defaultTag === 'all' ? undefined : [settings.defaultTag], undefined, settings.buildCount, undefined,
+            settings.defaultTag === 'all' ? undefined : settings.defaultTag.split(','), undefined, settings.buildCount, undefined,
             undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
             undefined, undefined, undefined);
         buildPages = buildPages.sort(function (a, b) {
