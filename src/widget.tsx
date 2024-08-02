@@ -19,6 +19,7 @@ import SDK = require("azure-devops-extension-sdk");
 import {ZeroData} from "azure-devops-ui/ZeroData";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
+import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 
 
 class BuildWithTimeline {
@@ -34,6 +35,7 @@ class BuildWithTimeline {
 
 class Widget extends React.Component<IProps, WidgetConfigurationSettings> implements Dashboard.IConfigurableWidget {
 
+    //#region fields
 
     private builds: BuildWithTimeline[] = []
     private projectId : string = ""
@@ -43,8 +45,15 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         TaskResult.Skipped
     ]
 
+    private tagDropdownMultiSelection = new DropdownMultiSelection();
     private tagItems : IListBoxItem[] = [];
 
+
+
+
+    //#endregion
+
+    //#region widget events
 
     componentDidMount() {
         SDK.init().then(() => {
@@ -52,6 +61,110 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         });
     }
 
+    async preload(_widgetSettings: Dashboard.WidgetSettings) {
+        const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
+        const projectInfo = await projectService.getProject();
+        this.projectId = projectInfo?.id ?? "";
+        return Dashboard.WidgetStatusHelper.Success();
+    }
+
+    async load(
+        widgetSettings: Dashboard.WidgetSettings
+    ): Promise<Dashboard.WidgetStatus> {
+        try {
+            console.debug("Loading widget data")
+            const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
+            await this.setStateFromWidgetSettings(settings);
+            await this.fillTagsDropDown();
+            return Dashboard.WidgetStatusHelper.Success();
+        } catch (e) {
+            return Dashboard.WidgetStatusHelper.Success();
+            //return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
+        }
+    }
+
+    //@ts-ignore
+    async reload(
+        widgetSettings: Dashboard.WidgetSettings
+    ): Promise<Dashboard.WidgetStatus | undefined> {
+        try {
+            console.debug("Reloading widget data")
+            console.debug(JSON.stringify(widgetSettings.customSettings.data))
+            const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
+
+            await this.setStateFromWidgetSettings(settings);
+            return Dashboard.WidgetStatusHelper.Success();
+        } catch (e) {
+            console.error("Failed reloading the widget data")
+            return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
+        }
+    }
+
+    //#endregion
+
+    //#region state
+
+    /**
+     * Takes the widget settings and configure the state of the component
+     * @param widgetSettings The custom settings from the widget settings
+     * @private
+     */
+    private async setStateFromWidgetSettings(widgetSettings: WidgetConfigurationSettings) {
+        const settings = widgetSettings;
+
+        const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
+        let buildPages: Build[] = [];
+        if(settings.matchAnyTag)
+        {
+            for(let tag of settings.defaultTag.split(',')) {
+                let buildPage = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
+                    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+                    settings.defaultTag === 'all' ? undefined : [tag], undefined, settings.buildCount, undefined,
+                    undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
+                    undefined, undefined, undefined);
+                buildPages = buildPages.concat(buildPage);
+            }
+        }
+        else {
+            let buildPage = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
+                undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+                settings.defaultTag === 'all' ? undefined : settings.defaultTag.split(','), undefined, settings.buildCount, undefined,
+                undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
+                undefined, undefined, undefined);
+            buildPages = buildPages.concat(buildPage);
+        }
+        buildPages = buildPages.filter((value, index, self) => self.indexOf(value) === index);
+
+
+        buildPages = buildPages.sort(function (a, b) {
+            return b.id - a.id;
+        });
+
+
+        let builds: Build[];
+
+
+        builds = buildPages.map(buildPage => buildPage).slice(0, settings.buildCount);
+
+
+        this.builds = [];
+        const tempBuilds: BuildWithTimeline[] = [];
+        for (let build of builds) {
+            const timeline = await buildClient.getBuildTimeline(this.projectId, build.id);
+            const newBuild = new BuildWithTimeline(build, timeline);
+            newBuild.timeline.records = newBuild.timeline.records.filter(this.filterTimelineByStage).sort(function (a, b) {
+                return a.order - b.order;
+            });
+            tempBuilds.push(newBuild);
+        }
+
+        this.builds = tempBuilds;
+        this.setState(settings);
+    }
+
+    //#endregion
+
+    //#region helpers
 
     /**
      * Checks if the timeline record is a stage
@@ -125,15 +238,6 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         }
     }
 
-    private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
-
-        this.setState( {
-            defaultTag:  selectedDropdown.text === undefined ? "all" : selectedDropdown.text
-        }, () => {
-            this.setStateFromWidgetSettings(this.state).then();
-        });
-    }
-
     /**
      * Fills up all known tags applied to builds in the current Azure DevOps project
      * @private
@@ -144,10 +248,6 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
 
         console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
         this.tagItems = [];
-        this.tagItems.push({
-            id: "all",
-            text: "all"
-        });
         if (tags.length > 0) {
             tags.sort().forEach(tag => {
                 const newItem : IListBoxItem = {
@@ -159,11 +259,66 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             });
         }
 
+        if(this.state.defaultTag !== "all" && this.state.defaultTag !== "")
+        {
+            const tagArray = this.state.defaultTag.split(",");
+            for (const tag of tagArray) {
+                const index = this.tagItems.findIndex((item) => item.id === tag);
+                if (index !== -1) {
+                    this.tagDropdownMultiSelection.select(index, undefined, true, true);
+                }
+            }
+            this.setState({
+                defaultTag: this.state.defaultTag
+            })
+        }
+        else {
+            this.setState({
+                defaultTag: "all"
+            });
+        }
+
+    }
+
+    //#endregion
+
+    //#region Event handlers
+
+    private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
+
+        let newTagState = "";
+        for(let i = 0;  i < this.tagDropdownMultiSelection.value.length;i++) {
+            const selectionRange = this.tagDropdownMultiSelection.value[i];
+            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++)
+            {
+                newTagState += this.tagItems[j].id + ",";
+            }
+        }
+        if(newTagState.endsWith(','))
+        {
+            newTagState = newTagState.substring(0, newTagState.length - 1);
+        }
         this.setState({
-            defaultTag: "all"
+            defaultTag:  newTagState === "" ? "all" : newTagState
+        }, async () => {
+            await this.setStateFromWidgetSettings(this.state);
         });
     }
 
+    private onClearTagDropdownSelectionClick()
+    {
+        this.tagDropdownMultiSelection.clear();
+        this.setState({
+            defaultTag: "all"
+        }, async () => {
+            await this.setStateFromWidgetSettings(this.state);
+        });
+    }
+
+     //#endregion
+
+
+    //#region render
     render(): JSX.Element {
         if(!this.state)
         {
@@ -189,13 +344,26 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
                 </h2>
 
                 <div className="content">
-                    <div>
+                    <div className={"widget-tag-container"}>
                         <label className="label">Filter by tag: </label>
                         <Dropdown items={this.tagItems}
+                                  actions={[
+                                      {
+                                          className: "bolt-dropdown-action-right-button",
+                                          disabled: this.tagDropdownMultiSelection.selectedCount === 0,
+                                          iconProps: { iconName: "Clear" },
+                                          text: "Clear",
+                                          onClick: () => {
+                                              this.onClearTagDropdownSelectionClick();
+                                          }
+                                      }
+                                  ]}
                                   noItemsText={"No tag was found"}
                                   placeholder={this.state.defaultTag === "" ? "Select a tag" : this.state.defaultTag}
                                   onSelect={this.onTagDropdownChange}
-                                  disabled={this.tagItems.length === 0}>
+                                  selection={this.tagDropdownMultiSelection}
+                                  className={"widget-tag-dropdown dropdown-element"}
+                                  >
 
                         </Dropdown>
                     </div>
@@ -266,84 +434,12 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         );
     }
 
-    /**
-     * Takes the widget settings and configure the state of the component
-     * @param widgetSettings The custom settings from the widget settings
-     * @private
-     */
-    private async setStateFromWidgetSettings(widgetSettings: WidgetConfigurationSettings) {
-        const settings = widgetSettings;
+    //#endregion
 
-        const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
-        let buildPages = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
-            undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-            settings.defaultTag === 'all' ? undefined : [settings.defaultTag], undefined, settings.buildCount, undefined,
-            undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
-            undefined, undefined, undefined);
-        buildPages = buildPages.sort(function (a, b) {
-            return b.id - a.id;
-        });
-
-        let builds: Build[];
-
-
-        builds = buildPages.map(buildPage => buildPage).slice(0, settings.buildCount);
-
-
-        this.builds = [];
-        const tempBuilds: BuildWithTimeline[] = [];
-        for (let build of builds) {
-            const timeline = await buildClient.getBuildTimeline(this.projectId, build.id);
-            const newBuild = new BuildWithTimeline(build, timeline);
-            newBuild.timeline.records = newBuild.timeline.records.filter(this.filterTimelineByStage).sort(function (a, b) {
-                return a.order - b.order;
-            });
-            tempBuilds.push(newBuild);
-        }
-
-        this.builds = tempBuilds;
-        this.setState(settings);
-    }
-
-    async preload(_widgetSettings: Dashboard.WidgetSettings) {
-        const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
-        const projectInfo = await projectService.getProject();
-        this.projectId = projectInfo?.id ?? "";
-        return Dashboard.WidgetStatusHelper.Success();
-    }
-
-    async load(
-        widgetSettings: Dashboard.WidgetSettings
-    ): Promise<Dashboard.WidgetStatus> {
-        try {
-            console.debug("Loading widget data")
-            const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
-            await this.setStateFromWidgetSettings(settings);
-            await this.fillTagsDropDown();
-            return Dashboard.WidgetStatusHelper.Success();
-        } catch (e) {
-            return Dashboard.WidgetStatusHelper.Success();
-            //return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
-        }
-    }
-
-    //@ts-ignore
-    async reload(
-        widgetSettings: Dashboard.WidgetSettings
-    ): Promise<Dashboard.WidgetStatus | undefined> {
-        try {
-            console.debug("Reloading widget data")
-            console.debug(JSON.stringify(widgetSettings.customSettings.data))
-            const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
-
-            await this.setStateFromWidgetSettings(settings);
-            return Dashboard.WidgetStatusHelper.Success();
-        } catch (e) {
-            console.error("Failed reloading the widget data")
-            return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
-        }
-    }
 }
+
+
+//#region Status Badge component
 
 interface IStageStatusProps {
     stageStatus?: TimelineRecordState
@@ -440,6 +536,8 @@ class StageStatus extends React.Component<IStageStatusProps, IStageStatusState> 
         return this.renderBadge();
     }
 }
+
+//#endregion
 
 const rootContainer = document.getElementById("root");
 
