@@ -42,7 +42,7 @@
     "css-loader": "^7.1.2",
     "rimraf": "^5.0.5",
     "sass": "^1.62.1",
-    "sass-loader": "^14.1.1",
+    "sass-loader": "^16.0.0",
     "style-loader": "^3.3.4",
     "tfx-cli": "^0.11.0",
     "ts-loader": "^9.5.1",
