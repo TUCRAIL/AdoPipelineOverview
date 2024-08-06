@@ -78,6 +78,8 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             await this.fillTagsDropDown();
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
+            console.error("Failed loading the widget data")
+            console.error(e)
             return Dashboard.WidgetStatusHelper.Success();
             //return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
         }
@@ -96,6 +98,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             console.error("Failed reloading the widget data")
+            console.error(e)
             return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
         }
     }
@@ -110,7 +113,9 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
      * @private
      */
     private async setStateFromWidgetSettings(widgetSettings: WidgetConfigurationSettings) {
-        const settings = widgetSettings;
+        const settings = WidgetConfigurationSettings.getEmptyObject();
+        settings.copy(widgetSettings);
+        console.debug("Setting state from widget settings" + JSON.stringify(settings));
 
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         let buildPages: Build[] = [];
