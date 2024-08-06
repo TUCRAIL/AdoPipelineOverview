@@ -23,7 +23,6 @@ import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
 import {createRoot} from "react-dom/client";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
-import {Label} from "azure-devops-ui/Label";
 
 class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSettings> implements Dashboard.IWidgetConfiguration{
     //#region fields
@@ -45,16 +44,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
 
     constructor(props : IProps) {
         super(props)
-        this.state = {
-            isBranchDropdownDisabled: true,
-            buildCount: 1,
-            showStages: true,
-            defaultTag: 'all',
-            buildDefinition: -1,
-            buildBranch: "",
-            definitionName: "",
-            matchAnyTag: false
-        }
+        this.state = new WidgetConfigurationSettings(-1, "", "", 1, "all", true, true, false);
     }
 
     //#region Widget events
@@ -306,7 +296,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             else {
                 branchName = `refs/heads/${branchName}`;
             }
-            let configuration = JSON.parse(JSON.stringify(this.state)) as WidgetConfigurationSettings;
+            let configuration = this.state.clone();
             configuration.buildBranch = branchName;
             let errorMessage = "";
             if(configuration.buildDefinition === -1)
@@ -586,6 +576,11 @@ export class WidgetConfigurationSettings {
         this.showStages = showStages;
         this.isBranchDropdownDisabled = isBranchDropdownDisabled === undefined ? false : isBranchDropdownDisabled;
         this.matchAnyTag = matchAnyTag === undefined ? false : matchAnyTag;
+    }
+
+    public clone() : WidgetConfigurationSettings {
+        return new WidgetConfigurationSettings(this.buildDefinition, this.buildBranch, this.definitionName,
+            this.buildCount, this.defaultTag, this.showStages, this.isBranchDropdownDisabled, this.matchAnyTag);
     }
 
 }
