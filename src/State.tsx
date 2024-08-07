@@ -37,6 +37,8 @@ export class WidgetConfigurationSettings {
             this.buildCount, this.defaultTag, this.showStages, this.isBranchDropdownDisabled, this.matchAnyTag);
     }
 
+
+
     public copy(original : WidgetConfigurationSettings)
     {
         this.buildDefinition = original.buildDefinition;
