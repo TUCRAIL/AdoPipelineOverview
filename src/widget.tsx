@@ -3,7 +3,6 @@ import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api"
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
 import React, {ReactElement} from "react";
 import { createRoot } from 'react-dom/client';
-import {IProps, WidgetConfigurationSettings} from "./configuration";
 import {
     Build, BuildQueryOrder,
     BuildRestClient,
@@ -20,6 +19,7 @@ import {ZeroData} from "azure-devops-ui/ZeroData";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
+import {IProps, WidgetConfigurationSettings} from "./State";
 
 
 class BuildWithTimeline {
