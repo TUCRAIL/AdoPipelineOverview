@@ -1,5 +1,4 @@
 import * as SDK from "azure-devops-extension-sdk";
-import * as API from "azure-devops-extension-api";
 import {ObservableValue} from "azure-devops-ui/Core/Observable";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import { Toggle } from "azure-devops-ui/Toggle";
@@ -18,14 +17,14 @@ import {
     BuildRestClient
 } from "azure-devops-extension-api/Build";
 import {GitRestClient} from "azure-devops-extension-api/Git";
-import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api";
+import {CommonServiceIds, IProjectPageService, getClient} from "azure-devops-extension-api/Common";
 import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
 import {createRoot} from "react-dom/client";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
-import {Label} from "azure-devops-ui/Label";
+import {IProps, WidgetConfigurationSettings} from "./State";
 
-class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSettings> implements Dashboard.IWidgetConfiguration{
+export class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSettings> implements Dashboard.IWidgetConfiguration{
     //#region fields
 
     private projectId = "";
@@ -45,16 +44,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
 
     constructor(props : IProps) {
         super(props)
-        this.state = {
-            isBranchDropdownDisabled: true,
-            buildCount: 1,
-            showStages: true,
-            defaultTag: 'all',
-            buildDefinition: -1,
-            buildBranch: "",
-            definitionName: "",
-            matchAnyTag: false
-        }
+        this.state = new WidgetConfigurationSettings(-1, "", "", 1, "all", true, true, false);
     }
 
     //#region Widget events
@@ -125,19 +115,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
      */
     private async setStateFromWidgetSettings(widgetSettings: Dashboard.WidgetSettings) {
         const settings = widgetSettings.customSettings.data;
-        const preFormattedSettings = JSON.parse(settings);
-        let postFormattedSettings = JSON.parse(settings);
-        postFormattedSettings.buildCount = parseInt(preFormattedSettings.buildCount);
-        const configuration = new WidgetConfigurationSettings(
-            postFormattedSettings.buildDefinition,
-            postFormattedSettings.buildBranch,
-            postFormattedSettings.definitionName,
-            postFormattedSettings.buildCount,
-            postFormattedSettings.defaultTag,
-            postFormattedSettings.showStages,
-            postFormattedSettings.isBranchDropdownDisabled,
-            postFormattedSettings.matchAnyTag
-        );
+        const configuration = JSON.parse(settings) as WidgetConfigurationSettings;
 
 
         this.setState(configuration, async () => {
@@ -154,7 +132,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
      */
     private async fillBranchesDropDown(definitionRepositoryId: string, buildBranch: string) {
         this.branchItems = [];
-        const codeClient = API.getClient<GitRestClient>(GitRestClient);
+        const codeClient = getClient<GitRestClient>(GitRestClient);
 
         const repositoryBranches = await codeClient.getBranches(definitionRepositoryId,
             this.projectId, undefined);
@@ -217,7 +195,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
      * @private
      */
     private async fillTagsDropDown() {
-        const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
+        const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const tags = await buildClient.getTags(this.projectId);
 
         console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
@@ -264,7 +242,7 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
         const project = await projectService.getProject()
         console.debug(`project id is ${project?.id}`)
         this.projectId = project?.id!;
-        const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
+        const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const buildDefinitions = await buildClient.getDefinitions(project!.id, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
             undefined, undefined, undefined, undefined, true, undefined, undefined);
 
@@ -306,7 +284,8 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             else {
                 branchName = `refs/heads/${branchName}`;
             }
-            let configuration = JSON.parse(JSON.stringify(this.state)) as WidgetConfigurationSettings;
+            let configuration = WidgetConfigurationSettings.getEmptyObject();
+            configuration.copy(this.state);
             configuration.buildBranch = branchName;
             let errorMessage = "";
             if(configuration.buildDefinition === -1)
@@ -316,6 +295,10 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
             if(configuration.buildBranch === "")
             {
                 errorMessage += "The branch selected is invalid \n";
+            }
+            if(typeof configuration.buildCount === "string")
+            {
+                configuration.buildCount = parseInt(configuration.buildCount);
             }
             if(configuration.buildCount < 1 || configuration.buildCount > 50)
             {
@@ -554,41 +537,6 @@ class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSet
 
 //#region classes and interfaces
 
-export interface IProps {}
-
-interface IConfigurationWidgetState {
-    isBranchDropdownDisabled: boolean;
-    buildCount: number;
-    showStages: boolean;
-    selectedTag: string;
-    selectedBuildDefinitionId: number;
-    selectedBranch: string;
-}
-
-export class WidgetConfigurationSettings {
-    public buildDefinition: number;
-    public buildBranch: string;
-    public definitionName: string;
-    public buildCount: number;
-    public defaultTag: string;
-    public showStages: boolean;
-    //TODO: Remove this property and go back to use IConfigurationWidgetState for the configuration widget state
-    public isBranchDropdownDisabled: boolean = false;
-    public matchAnyTag: boolean = false;
-
-    constructor(buildDefinition: number, buildBranch: string, definitionName: string, buildCount: number,
-                defaultTag: string, showStages: boolean, isBranchDropdownDisabled?: boolean, matchAnyTag?: boolean) {
-        this.buildDefinition = buildDefinition;
-        this.buildBranch = buildBranch;
-        this.definitionName = definitionName;
-        this.buildCount = buildCount;
-        this.defaultTag = defaultTag;
-        this.showStages = showStages;
-        this.isBranchDropdownDisabled = isBranchDropdownDisabled === undefined ? false : isBranchDropdownDisabled;
-        this.matchAnyTag = matchAnyTag === undefined ? false : matchAnyTag;
-    }
-
-}
 
 //#endregion
 

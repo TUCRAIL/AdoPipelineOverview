@@ -1,10 +1,8 @@
 import "azure-devops-ui/Core/override.css";
-import * as API from "azure-devops-extension-api";
 import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api";
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
 import React, {ReactElement} from "react";
 import { createRoot } from 'react-dom/client';
-import {IProps, WidgetConfigurationSettings} from "./configuration";
 import {
     Build, BuildQueryOrder,
     BuildRestClient,
@@ -16,10 +14,12 @@ import {
 } from "azure-devops-extension-api/Build";
 import {Status, Statuses, StatusSize} from "azure-devops-ui/Status";
 import SDK = require("azure-devops-extension-sdk");
+import {getClient} from "azure-devops-extension-api";
 import {ZeroData} from "azure-devops-ui/ZeroData";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
+import {IProps, WidgetConfigurationSettings} from "./State";
 
 
 class BuildWithTimeline {
@@ -78,6 +78,8 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             await this.fillTagsDropDown();
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
+            console.error("Failed loading the widget data")
+            console.error(e)
             return Dashboard.WidgetStatusHelper.Success();
             //return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
         }
@@ -96,6 +98,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             console.error("Failed reloading the widget data")
+            console.error(e)
             return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
         }
     }
@@ -110,16 +113,18 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
      * @private
      */
     private async setStateFromWidgetSettings(widgetSettings: WidgetConfigurationSettings) {
-        const settings = widgetSettings;
+        const settings = WidgetConfigurationSettings.getEmptyObject();
+        settings.copy(widgetSettings);
+        console.debug("Setting state from widget settings" + JSON.stringify(settings));
 
-        const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
+        const buildClient = getClient<BuildRestClient>(BuildRestClient);
         let buildPages: Build[] = [];
         if(settings.matchAnyTag)
         {
             for(let tag of settings.defaultTag.split(',')) {
                 let buildPage = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
                     undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                    settings.defaultTag === 'all' ? undefined : [tag], undefined, settings.buildCount, undefined,
+                    settings.defaultTag === 'all' ? undefined : [tag], undefined, settings.getBuildCount(), undefined,
                     undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
                     undefined, undefined, undefined);
                 buildPages = buildPages.concat(buildPage);
@@ -128,7 +133,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         else {
             let buildPage = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
                 undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                settings.defaultTag === 'all' ? undefined : settings.defaultTag.split(','), undefined, settings.buildCount, undefined,
+                settings.defaultTag === 'all' ? undefined : settings.defaultTag.split(','), undefined, settings.getBuildCount(), undefined,
                 undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
                 undefined, undefined, undefined);
             buildPages = buildPages.concat(buildPage);
@@ -144,7 +149,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         let builds: Build[];
 
 
-        builds = buildPages.map(buildPage => buildPage).slice(0, settings.buildCount);
+        builds = buildPages.map(buildPage => buildPage).slice(0, settings.getBuildCount());
 
 
         this.builds = [];
@@ -243,7 +248,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
      * @private
      */
     private async fillTagsDropDown() {
-        const buildClient = API.getClient<BuildRestClient>(BuildRestClient);
+        const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const tags = await buildClient.getTags(this.projectId);
 
         console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
