@@ -1,9 +1,7 @@
 import {createRoot} from "react-dom/client";
 import React from "react";
-import {IProps, WidgetConfigurationSettings} from "./State";
+import {IProps} from "./State";
 import SDK = require("azure-devops-extension-sdk");
-
-import * as Dashboard from "azure-devops-extension-api/Dashboard";
 
 interface  IState {
 

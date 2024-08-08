@@ -1,5 +1,5 @@
 import "azure-devops-ui/Core/override.css";
-import {CommonServiceIds, IGlobalDialog, IHostPageLayoutService, IProjectPageService} from "azure-devops-extension-api";
+import {CommonServiceIds/*, IHostPageLayoutService*/, IProjectPageService} from "azure-devops-extension-api";
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
 import React, {ReactElement} from "react";
 import { createRoot } from 'react-dom/client';
@@ -20,7 +20,6 @@ import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 import {IProps, WidgetConfigurationSettings, WidgetState} from "./State";
-import {Button} from "azure-devops-ui/Button";
 
 
 class BuildWithTimeline {
@@ -122,8 +121,8 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
     //#region state
 
     /**
-     * Takes the widget settings and configure the state of the component
-     * @param widgetSettings The custom settings from the widget settings
+     * Takes the state object and re-hydrate the component
+     * @param widgetState The custom state object of the component
      * @private
      */
     private async initializeState(widgetState: WidgetState) {
@@ -141,7 +140,7 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
             for(let tag of settings.selectedTag.split(',')) {
                 let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
                     undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                    settings.selectedTag === 'all' ? undefined : [tag], undefined, settings.getBuildCount(), undefined,
+                    settings.selectedTag === 'all' ? undefined : [tag], undefined, settings.buildCount, undefined,
                     undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.selectedBranch === 'all' ? undefined : settings.selectedBranch,
                     undefined, undefined, undefined);
                 buildPages = buildPages.concat(buildPage);
@@ -150,7 +149,7 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
         else {
             let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
                 undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                settings.selectedTag === 'all' ? undefined : settings.selectedTag.split(','), undefined, settings.getBuildCount(), undefined,
+                settings.selectedTag === 'all' ? undefined : settings.selectedTag.split(','), undefined, settings.buildCount, undefined,
                 undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.selectedBranch === 'all' ? undefined : settings.selectedBranch,
                 undefined, undefined, undefined);
             buildPages = buildPages.concat(buildPage);
@@ -166,7 +165,7 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
         let builds: Build[];
 
 
-        builds = buildPages.map(buildPage => buildPage).slice(0, settings.getBuildCount());
+        builds = buildPages.map(buildPage => buildPage).slice(0, settings.buildCount);
 
 
         this.builds = [];
@@ -299,7 +298,6 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
                 selectedTag: "all"
             });
         }
-
     }
 
     //#endregion
@@ -338,26 +336,26 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
     }
 
     //TODO: Update this when implementing dialog to show the result of each stages in a dialog (ie: when there are too many stages to show)
-    private onDialogButtonClick = async () => {
-        var extensionContext = SDK.getExtensionContext();
-
-        var contributionId = extensionContext.publisherId + "." +
-            extensionContext.extensionId + ".DeploymentsWidget.BuildDetails";
-
-        var dialogOptions = {
-            title: "My dialog",
-            width: 800,
-            height: 600,
-            urlReplacementObject: { buildId: "0"}
-        }
-
-        var dialogService = await SDK.getService<IHostPageLayoutService>(CommonServiceIds.HostPageLayoutService);
-
-        dialogService.openCustomDialog(contributionId, dialogOptions);
-
-
-
-    }
+    // private onDialogButtonClick = async () => {
+    //     var extensionContext = SDK.getExtensionContext();
+    //
+    //     var contributionId = extensionContext.publisherId + "." +
+    //         extensionContext.extensionId + ".DeploymentsWidget.BuildDetails";
+    //
+    //     var dialogOptions = {
+    //         title: "My dialog",
+    //         width: 800,
+    //         height: 600,
+    //         urlReplacementObject: { buildId: "0"}
+    //     }
+    //
+    //     var dialogService = await SDK.getService<IHostPageLayoutService>(CommonServiceIds.HostPageLayoutService);
+    //
+    //     dialogService.openCustomDialog(contributionId, dialogOptions);
+    //
+    //
+    //
+    // }
 
      //#endregion
 

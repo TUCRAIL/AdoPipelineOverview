@@ -19,46 +19,6 @@ export class WidgetConfigurationSettings {
         this.isBranchDropdownDisabled = isBranchDropdownDisabled === undefined ? false : isBranchDropdownDisabled;
         this.matchAnyTag = matchAnyTag === undefined ? false : matchAnyTag;
     }
-
-    public static getEmptyObject() : WidgetConfigurationSettings{
-        return new WidgetConfigurationSettings(-1, "", "", 1,
-            "all", true, true, false);
-    }
-
-    public clone() : WidgetConfigurationSettings {
-        //Do a conversion to ultimately make sure that no user still has a string for the build count
-        if(typeof this.buildCount === "string")
-        {
-            this.buildCount = parseInt(this.buildCount)
-        }
-        return new WidgetConfigurationSettings(this.buildDefinition, this.buildBranch, this.definitionName,
-            this.buildCount, this.defaultTag, this.showStages, this.isBranchDropdownDisabled, this.matchAnyTag);
-    }
-
-
-
-    public copy(original : WidgetConfigurationSettings)
-    {
-        this.buildDefinition = original.buildDefinition;
-        this.buildBranch = original.buildBranch;
-        this.definitionName = original.definitionName;
-        this.buildCount = original.buildCount;
-        this.defaultTag = original.defaultTag;
-        this.showStages = original.showStages;
-        this.isBranchDropdownDisabled = original.isBranchDropdownDisabled;
-        this.matchAnyTag = original.matchAnyTag;
-
-        if(typeof this.buildCount === "string")
-        {
-            this.buildCount = parseInt(this.buildCount)
-        }
-    }
-
-    public getBuildCount() : number {
-        return typeof this.buildCount === "string" ?
-            parseInt(this.buildCount) :
-            this.buildCount;
-    }
 }
 
 export interface IProps {
@@ -67,7 +27,7 @@ export interface IProps {
 
 export class ConfigurationWidgetState {
     isBranchDropdownDisabled: boolean;
-    buildCount: number | number ;
+    buildCount: number;
     showStages: boolean;
     selectedTag: string;
     selectedBuildDefinitionId: number;
@@ -105,10 +65,7 @@ export class ConfigurationWidgetState {
 
     public clone() : ConfigurationWidgetState {
         //Do a conversion to ultimately make sure that no user still has a string for the build count
-        if(typeof this.buildCount === "string")
-        {
-            this.buildCount = parseInt(this.buildCount)
-        }
+
         return new ConfigurationWidgetState(this.selectedBuildDefinitionId, this.selectedBranch, this.selectedTag,
             this.buildCount, this.showStages, this.isBranchDropdownDisabled, this.matchAnyTagSelected);
     }
@@ -125,17 +82,9 @@ export class ConfigurationWidgetState {
         this.isBranchDropdownDisabled = original.isBranchDropdownDisabled;
         this.matchAnyTagSelected = original.matchAnyTagSelected;
 
-        if(typeof this.buildCount === "string")
-        {
-            this.buildCount = parseInt(this.buildCount)
-        }
+
     }
 
-    public getBuildCount() : number {
-        return typeof this.buildCount === "string" ?
-            parseInt(this.buildCount) :
-            this.buildCount;
-    }
 }
 
 export class WidgetState {
@@ -197,9 +146,4 @@ export class WidgetState {
         }
     }
 
-    public getBuildCount() : number {
-        return typeof this.buildCount === "string" ?
-            parseInt(this.buildCount) :
-            this.buildCount;
-    }
 }
