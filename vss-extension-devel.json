@@ -81,6 +81,15 @@
         "description": "Configures the widget",
         "uri": "dist/configuration.html"
       }
+    },
+    {
+      "id": "DeploymentsWidget.BuildDetails",
+      "type": "ms.vss-web.control",
+      "description": "Get the details of a build in a form of a schema",
+      "targets": [],
+      "properties": {
+        "uri": "dist/build-details.html?buildId={{buildId}}"
+      }
     }
   ],
   "files": [

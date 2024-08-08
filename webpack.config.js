@@ -1,5 +1,5 @@
 const path = require("path");
-const fs = require("fs");
+//const fs = require("fs");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 
@@ -23,6 +23,7 @@ module.exports = {
     entry: {
         widget: "./src/widget.tsx",
         configuration: "./src/configuration.tsx",
+        "build-details": "./src/build-details.tsx",
     },
     output: {
         filename: "[name].js",
