@@ -382,7 +382,7 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
 
                 <h2 className="title">
                     <div className="inner-title">{this.state.selectedDefinitionName ?? 'No definition found'}</div>
-                    <div className="subtitle">{this.state.selectedBranch ?? 'No branch found'}</div>
+                    <div className="subtitle">{this.state.selectedBranch.replace("refs/heads/", "") ?? 'No branch found'}</div>
                 </h2>
 
                 <div className="content">

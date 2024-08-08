@@ -5,18 +5,16 @@ export class WidgetConfigurationSettings {
     public buildCount: number | string;
     public defaultTag: string;
     public showStages: boolean;
-    public isBranchDropdownDisabled: boolean = false;
     public matchAnyTag: boolean = false;
 
     constructor(buildDefinition: number, buildBranch: string, definitionName: string, buildCount: number,
-                defaultTag: string, showStages: boolean, isBranchDropdownDisabled?: boolean, matchAnyTag?: boolean) {
+                defaultTag: string, showStages: boolean, matchAnyTag?: boolean) {
         this.buildDefinition = buildDefinition;
         this.buildBranch = buildBranch;
         this.definitionName = definitionName;
         this.buildCount = buildCount;
         this.defaultTag = defaultTag;
         this.showStages = showStages;
-        this.isBranchDropdownDisabled = isBranchDropdownDisabled === undefined ? false : isBranchDropdownDisabled;
         this.matchAnyTag = matchAnyTag === undefined ? false : matchAnyTag;
     }
 }
@@ -55,12 +53,12 @@ export class ConfigurationWidgetState {
             settings.buildCount = parseInt(settings.buildCount)
         }
         return new ConfigurationWidgetState(settings.buildDefinition, settings.buildBranch, settings.defaultTag,
-            settings.buildCount, settings.showStages, settings.isBranchDropdownDisabled, settings.matchAnyTag);
+            settings.buildCount, settings.showStages, settings.buildBranch === "", settings.matchAnyTag);
     }
 
     public static toWidgetConfigurationSettings(state: ConfigurationWidgetState, definitionName: string) : WidgetConfigurationSettings {
         return new WidgetConfigurationSettings(state.selectedBuildDefinitionId, state.selectedBranch, definitionName, state.buildCount,
-            state.selectedTag, state.showStages, state.isBranchDropdownDisabled, state.matchAnyTagSelected);
+            state.selectedTag, state.showStages, state.matchAnyTagSelected);
     }
 
     public clone() : ConfigurationWidgetState {
