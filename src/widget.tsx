@@ -1,5 +1,5 @@
 import "azure-devops-ui/Core/override.css";
-import {CommonServiceIds, IProjectPageService} from "azure-devops-extension-api";
+import {CommonServiceIds, IGlobalDialog, IHostPageLayoutService, IProjectPageService} from "azure-devops-extension-api";
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
 import React, {ReactElement} from "react";
 import { createRoot } from 'react-dom/client';
@@ -19,7 +19,8 @@ import {ZeroData} from "azure-devops-ui/ZeroData";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
-import {IProps, WidgetConfigurationSettings} from "./State";
+import {IProps, WidgetConfigurationSettings, WidgetState} from "./State";
+import {Button} from "azure-devops-ui/Button";
 
 
 class BuildWithTimeline {
@@ -33,7 +34,7 @@ class BuildWithTimeline {
 
 }
 
-class Widget extends React.Component<IProps, WidgetConfigurationSettings> implements Dashboard.IConfigurableWidget {
+class Widget extends React.Component<IProps, WidgetState> implements Dashboard.IConfigurableWidget {
 
     //#region fields
 
@@ -74,8 +75,16 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
         try {
             console.debug("Loading widget data")
             const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
-            await this.setStateFromWidgetSettings(settings);
-            await this.fillTagsDropDown();
+
+            if(settings === null || settings === undefined || typeof settings === "undefined")
+            {
+                console.warn("Widget settings are not configured. Please configure the widget");
+                this.setState(null);
+            }
+            else {
+                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings));
+                await this.fillTagsDropDown();
+            }
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             console.error("Failed loading the widget data")
@@ -93,8 +102,13 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             console.debug("Reloading widget data")
             console.debug(JSON.stringify(widgetSettings.customSettings.data))
             const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
-
-            await this.setStateFromWidgetSettings(settings);
+            if(settings === null || settings === undefined || typeof settings === "undefined")
+            {
+                this.setState(null);
+            }
+            else {
+                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings));
+            }
             return Dashboard.WidgetStatusHelper.Success();
         } catch (e) {
             console.error("Failed reloading the widget data")
@@ -112,29 +126,32 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
      * @param widgetSettings The custom settings from the widget settings
      * @private
      */
-    private async setStateFromWidgetSettings(widgetSettings: WidgetConfigurationSettings) {
-        const settings = WidgetConfigurationSettings.getEmptyObject();
-        settings.copy(widgetSettings);
+    private async initializeState(widgetState: WidgetState) {
+
+        //Need to get empty object and copy because the widgetState could actually be of type ReadOnly<WidgetState>
+        const settings = WidgetState.getEmptyObject();
+        settings.copy(widgetState);
+
         console.debug("Setting state from widget settings" + JSON.stringify(settings));
 
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         let buildPages: Build[] = [];
-        if(settings.matchAnyTag)
+        if(settings.matchAnyTagSelected)
         {
-            for(let tag of settings.defaultTag.split(',')) {
-                let buildPage = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
+            for(let tag of settings.selectedTag.split(',')) {
+                let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
                     undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                    settings.defaultTag === 'all' ? undefined : [tag], undefined, settings.getBuildCount(), undefined,
-                    undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
+                    settings.selectedTag === 'all' ? undefined : [tag], undefined, settings.getBuildCount(), undefined,
+                    undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.selectedBranch === 'all' ? undefined : settings.selectedBranch,
                     undefined, undefined, undefined);
                 buildPages = buildPages.concat(buildPage);
             }
         }
         else {
-            let buildPage = await buildClient.getBuilds(this.projectId, [settings.buildDefinition], undefined,
+            let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
                 undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                settings.defaultTag === 'all' ? undefined : settings.defaultTag.split(','), undefined, settings.getBuildCount(), undefined,
-                undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.buildBranch === 'all' ? undefined : settings.buildBranch,
+                settings.selectedTag === 'all' ? undefined : settings.selectedTag.split(','), undefined, settings.getBuildCount(), undefined,
+                undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.selectedBranch === 'all' ? undefined : settings.selectedBranch,
                 undefined, undefined, undefined);
             buildPages = buildPages.concat(buildPage);
         }
@@ -264,9 +281,9 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             });
         }
 
-        if(this.state.defaultTag !== "all" && this.state.defaultTag !== "")
+        if(this.state.selectedTag !== "all" && this.state.selectedTag !== "")
         {
-            const tagArray = this.state.defaultTag.split(",");
+            const tagArray = this.state.selectedTag.split(",");
             for (const tag of tagArray) {
                 const index = this.tagItems.findIndex((item) => item.id === tag);
                 if (index !== -1) {
@@ -274,12 +291,12 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
                 }
             }
             this.setState({
-                defaultTag: this.state.defaultTag
+                selectedTag: this.state.selectedTag
             })
         }
         else {
             this.setState({
-                defaultTag: "all"
+                selectedTag: "all"
             });
         }
 
@@ -304,9 +321,9 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             newTagState = newTagState.substring(0, newTagState.length - 1);
         }
         this.setState({
-            defaultTag:  newTagState === "" ? "all" : newTagState
+            selectedTag:  newTagState === "" ? "all" : newTagState
         }, async () => {
-            await this.setStateFromWidgetSettings(this.state);
+            await this.initializeState(this.state);
         });
     }
 
@@ -314,10 +331,32 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
     {
         this.tagDropdownMultiSelection.clear();
         this.setState({
-            defaultTag: "all"
+            selectedTag: "all"
         }, async () => {
-            await this.setStateFromWidgetSettings(this.state);
+            await this.initializeState(this.state);
         });
+    }
+
+    //TODO: Update this when implementing dialog to show the result of each stages in a dialog (ie: when there are too many stages to show)
+    private onDialogButtonClick = async () => {
+        var extensionContext = SDK.getExtensionContext();
+
+        var contributionId = extensionContext.publisherId + "." +
+            extensionContext.extensionId + ".DeploymentsWidget.BuildDetails";
+
+        var dialogOptions = {
+            title: "My dialog",
+            width: 800,
+            height: 600,
+            urlReplacementObject: { buildId: "0"}
+        }
+
+        var dialogService = await SDK.getService<IHostPageLayoutService>(CommonServiceIds.HostPageLayoutService);
+
+        dialogService.openCustomDialog(contributionId, dialogOptions);
+
+
+
     }
 
      //#endregion
@@ -344,8 +383,8 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
             <div id="widget-container">
 
                 <h2 className="title">
-                    <div className="inner-title">{this.state.definitionName ?? 'No definition found'}</div>
-                    <div className="subtitle">{this.state.buildBranch ?? 'No branch found'}</div>
+                    <div className="inner-title">{this.state.selectedDefinitionName ?? 'No definition found'}</div>
+                    <div className="subtitle">{this.state.selectedBranch ?? 'No branch found'}</div>
                 </h2>
 
                 <div className="content">
@@ -364,7 +403,7 @@ class Widget extends React.Component<IProps, WidgetConfigurationSettings> implem
                                       }
                                   ]}
                                   noItemsText={"No tag was found"}
-                                  placeholder={this.state.defaultTag === "" ? "Select a tag" : this.state.defaultTag}
+                                  placeholder={this.state.selectedTag === "" ? "Select a tag" : this.state.selectedTag}
                                   onSelect={this.onTagDropdownChange}
                                   selection={this.tagDropdownMultiSelection}
                                   className={"widget-tag-dropdown dropdown-element"}

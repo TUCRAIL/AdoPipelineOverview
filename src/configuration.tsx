@@ -22,9 +22,9 @@ import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
 import {createRoot} from "react-dom/client";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
-import {IProps, WidgetConfigurationSettings} from "./State";
+import {ConfigurationWidgetState, IProps, WidgetConfigurationSettings} from "./State";
 
-export class ConfigurationWidget extends React.Component<IProps, WidgetConfigurationSettings> implements Dashboard.IWidgetConfiguration{
+export class ConfigurationWidget extends React.Component<IProps, ConfigurationWidgetState> implements Dashboard.IWidgetConfiguration{
     //#region fields
 
     private projectId = "";
@@ -44,7 +44,7 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
 
     constructor(props : IProps) {
         super(props)
-        this.state = new WidgetConfigurationSettings(-1, "", "", 1, "all", true, true, false);
+        this.state = ConfigurationWidgetState.getEmptyObject();
     }
 
     //#region Widget events
@@ -60,7 +60,7 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
         })
     }
 
-    componentDidUpdate(_prevProps: Readonly<IProps>, _prevState: Readonly<WidgetConfigurationSettings>, _snapshot?: any) {
+    componentDidUpdate(_prevProps: Readonly<IProps>, _prevState: Readonly<ConfigurationWidgetState>, _snapshot?: any) {
         try {
             this.validateConfiguration().then();
         }
@@ -115,12 +115,20 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
      */
     private async setStateFromWidgetSettings(widgetSettings: Dashboard.WidgetSettings) {
         const settings = widgetSettings.customSettings.data;
-        const configuration = JSON.parse(settings) as WidgetConfigurationSettings;
-
-
-        this.setState(configuration, async () => {
+        if(settings === null || settings === undefined || typeof settings === "undefined")
+        {
             await this.initializeState();
-        });
+        }
+        else {
+            const configuration = JSON.parse(settings) as WidgetConfigurationSettings;
+
+
+            this.setState(ConfigurationWidgetState.fromWidgetConfigurationSettings(configuration),
+                async () => {
+                    await this.initializeState();
+                });
+        }
+
 
     }
 
@@ -180,7 +188,7 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
         if(!foundMatchingBranch)
         {
             this.setState({
-                    buildBranch: "all"
+                    selectedBranch: "all"
                 }
             );
         }
@@ -211,9 +219,9 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
             });
         }
 
-        if(this.state.defaultTag !== "all" && this.state.defaultTag !== "")
+        if(this.state.selectedTag !== "all" && this.state.selectedTag !== "")
         {
-            const tagArray = this.state.defaultTag.split(",");
+            const tagArray = this.state.selectedTag.split(",");
             for (const tag of tagArray) {
                 const index = this.tagItems.findIndex((item) => item.id === tag);
                 if (index !== -1) {
@@ -221,12 +229,12 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
                 }
             }
             this.setState({
-                defaultTag: this.state.defaultTag
+                selectedTag: this.state.selectedTag
             })
         }
         else {
             this.setState({
-                defaultTag: "all"
+                selectedTag: "all"
             });
         }
 
@@ -253,13 +261,14 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
                 text: definition.name,
                 data: definition
             });
-            if(definition.id === this.state.buildDefinition)
+            if(definition.id === this.state.selectedBuildDefinitionId)
             {
                 this.selectedBuildDefinition.value = definition.name;
                 this.setState({
                     isBranchDropdownDisabled: false
                 });
-                await this.fillBranchesDropDown(this.getDataAsBuildReference(definition).repository.id.toString(), this.state.buildBranch);
+                await this.fillBranchesDropDown(this.getDataAsBuildReference(definition).repository.id.toString(),
+                    this.state.selectedBranch);
                 await this.fillTagsDropDown();
             }
         }));
@@ -272,7 +281,7 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
     private async validateConfiguration() : Promise<Dashboard.SaveStatus>
     {
         try {
-            let branchName = this.state.buildBranch;
+            let branchName = this.state.selectedBranch;
             if(branchName === "all")
             {
 
@@ -284,8 +293,8 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
             else {
                 branchName = `refs/heads/${branchName}`;
             }
-            let configuration = WidgetConfigurationSettings.getEmptyObject();
-            configuration.copy(this.state);
+            let configuration = ConfigurationWidgetState
+                .toWidgetConfigurationSettings(this.state, this.selectedBuildDefinition.value)
             configuration.buildBranch = branchName;
             let errorMessage = "";
             if(configuration.buildDefinition === -1)
@@ -341,14 +350,14 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
     private onBuildDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
         this.setState({
             isBranchDropdownDisabled: true,
-            defaultTag: 'all',
-            buildBranch: "all"
+            selectedTag: 'all',
+            selectedBranch: "all"
         });
         this.selectedBuildDefinition.value = selectedDropdown.text || "";
         console.debug(`Selected new build definition ${this.selectedBuildDefinition.value}`);
         this.setState({
-            buildDefinition: this.getDataAsBuildReference(selectedDropdown.data!).id,
-            buildBranch: "all"
+            selectedBuildDefinitionId: this.getDataAsBuildReference(selectedDropdown.data!).id,
+            selectedBranch: "all"
         });
         this.buildDefinitionItems!.find(d =>
             Number(this.getDataAsBuildReference(d).id) === Number(this.getDataAsBuildReference(selectedDropdown.data!).id));
@@ -356,7 +365,7 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
             .then();
         this.fillTagsDropDown().then();
 
-        console.debug(`Selected new build definition ${this.state.buildDefinition}`);
+        console.debug(`Selected new build definition ${this.state.selectedBuildDefinitionId}`);
     };
 
     /**
@@ -399,7 +408,7 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
      */
     private onBranchDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
         this.setState({
-            buildBranch: selectedDropdown.text === undefined ? "" : selectedDropdown.text
+            selectedBranch: selectedDropdown.text === undefined ? "" : selectedDropdown.text
         });
     };
 
@@ -425,7 +434,7 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
             newTagState = newTagState.substring(0, newTagState.length - 1);
         }
         this.setState({
-            defaultTag:  newTagState === "" ? "all" : newTagState
+            selectedTag:  newTagState === "" ? "all" : newTagState
         });
     }
 
@@ -433,13 +442,13 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
     {
         this.tagDropdownMultiSelection.clear();
         this.setState({
-            defaultTag: "all"
+            selectedTag: "all"
         });
     }
 
     private onTagToggleChange = (_event: React.SyntheticEvent<HTMLElement>, checked: boolean) => {
         this.setState({
-            matchAnyTag: this.state.matchAnyTag === undefined ? true : checked
+            matchAnyTagSelected: this.state.matchAnyTagSelected === undefined ? true : checked
         })
     }
 
@@ -463,7 +472,7 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
                     <Dropdown items={this.buildDefinitionItems}
                               noItemsText={"No build definition was found"}
                               className={"dropdown-element"}
-                              placeholder={this.state.buildDefinition === 0 ? "Select a build definition" : this.selectedBuildDefinition.value}
+                              placeholder={this.state.selectedBuildDefinitionId === -1 ? "Select a build definition" : this.selectedBuildDefinition.value}
                               onSelect={this.onBuildDropdownChange}
 
                     required={true}/>
@@ -475,7 +484,7 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
                     <Dropdown items={this.branchItems}
                               noItemsText={"No branch was found"}
                               className={"dropdown-element"}
-                              placeholder={this.state.buildBranch === "" ? "Select a branch" : this.state.buildBranch.replace("refs/heads/", "")}
+                              placeholder={this.state.selectedBranch === "" ? "Select a branch" : this.state.selectedBranch.replace("refs/heads/", "")}
                               onSelect={this.onBranchDropdownChange}
                               disabled={this.state.isBranchDropdownDisabled}/>
 
@@ -506,14 +515,14 @@ export class ConfigurationWidget extends React.Component<IProps, WidgetConfigura
                                   }
                               ]}
                               noItemsText={"No tag was found"}
-                              placeholder={this.state.defaultTag === "" ? "Select a tag" : this.state.defaultTag}
+                              placeholder={this.state.selectedTag === "" ? "Select a tag" : this.state.selectedTag}
                               onSelect={this.onTagDropdownChange}
                               selection={this.tagDropdownMultiSelection}
                               />
 
                     <Toggle offText={"Match all"}
                             onText={"Match any"}
-                            checked={this.state.matchAnyTag}
+                            checked={this.state.matchAnyTagSelected}
                             onChange={this.onTagToggleChange }>
                     </Toggle>
 
