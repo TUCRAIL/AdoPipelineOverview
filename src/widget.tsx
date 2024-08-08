@@ -2,7 +2,7 @@ import "azure-devops-ui/Core/override.css";
 import {CommonServiceIds/*, IHostPageLayoutService*/, IProjectPageService} from "azure-devops-extension-api";
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
 import React from "react";
-import { createRoot } from 'react-dom/client';
+//import { createRoot } from 'react-dom/client';
 import {
     Build, BuildQueryOrder,
     BuildRestClient,
@@ -21,6 +21,7 @@ import {
 } from "./State";
 import {BuildWithTimeline} from "./Models/BuildWithTimeline";
 import {BuildResultRow} from "./Components/BuildResultRow";
+import {render} from "react-dom";
 
 class Widget extends React.Component<IProps, WidgetState> implements Dashboard.IConfigurableWidget {
 
@@ -361,10 +362,11 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
 
 const rootContainer = document.getElementById("root");
 
-const root = createRoot(rootContainer);
+//const root = createRoot(rootContainer);
 
-root.render(<Widget/>);
+//root.render(<Widget/>);
 
+render(<Widget/>, rootContainer);
 
 
 
