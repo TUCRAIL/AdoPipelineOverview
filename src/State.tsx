@@ -121,11 +121,6 @@ export class WidgetState {
     }
 
     public clone() : WidgetState {
-        //Do a conversion to ultimately make sure that no user still has a string for the build count
-        if(typeof this.buildCount === "string")
-        {
-            this.buildCount = parseInt(this.buildCount)
-        }
         return new WidgetState(this.selectedDefinitionName, this.selectedBuildDefinitionId, this.selectedBranch, this.selectedTag,
             this.buildCount, this.showStages, this.matchAnyTagSelected);
     }
@@ -139,11 +134,6 @@ export class WidgetState {
         this.buildCount = original.buildCount;
         this.showStages = original.showStages;
         this.matchAnyTagSelected = original.matchAnyTagSelected;
-
-        if(typeof this.buildCount === "string")
-        {
-            this.buildCount = parseInt(this.buildCount)
-        }
     }
 
 }
