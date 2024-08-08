@@ -1,6 +1,6 @@
 import React, {ReactElement} from "react";
-import {BuildResultRowState, IBuildResultRowProps, IStageResultCellProps, StageResultCellState} from "../State";
-import {BuildResult, TaskResult, TimelineRecordState} from "azure-devops-extension-api/Build";
+import {BuildResultRowState, IBuildResultRowProps} from "../State";
+import {BuildResult, TaskResult} from "azure-devops-extension-api/Build";
 import {StageStatus} from "./StageStatus";
 import {StageResultCell} from "./StageResultCell";
 
@@ -38,11 +38,11 @@ export class BuildResultRow extends React.Component<IBuildResultRowProps, BuildR
             </td>
             {this.state.build.timeline.records.map((record, indexTimeline) => {
                 return (
-                    <StageResultCell
-                        timelineRecord={record} timelineIndex={indexTimeline}
-                    buildIndex={this.state.buildIndex} isMultiStage={this.state.build.timeline.records.length > 1}
-                    previousTimelineRecordState={BuildResultRowState.getPreviousTimelineRecordStateForIndex(this.state.build.timeline.records,
-                    indexTimeline)}/>
+                        <StageResultCell key={record.id + "/" + indexTimeline}
+                            timelineRecord={record} timelineIndex={indexTimeline}
+                            buildIndex={this.state.buildIndex} isMultiStage={this.state.build.timeline.records.length > 1}
+                            previousTimelineRecordState={BuildResultRowState.getPreviousTimelineRecordStateForIndex(this.state.build.timeline.records,
+                                indexTimeline)}/>
                     )
                 })
             }

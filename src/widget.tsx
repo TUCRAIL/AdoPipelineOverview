@@ -337,7 +337,8 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
                                 <tbody>
                                 {
                                     this.builds.map((buildWithTimeline, index) => {
-                                    return (<BuildResultRow showStages={this.state.showStages}
+                                    return (<BuildResultRow key={buildWithTimeline.build.id + "/" + index}
+                                                    showStages={this.state.showStages}
                                                     build={buildWithTimeline}
                                                     buildIndex={index} />)
                                     })
