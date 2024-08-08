@@ -1,7 +1,8 @@
-import {createRoot} from "react-dom/client";
+//import {createRoot} from "react-dom/client";
 import React from "react";
 import {IProps} from "./State";
 import SDK = require("azure-devops-extension-sdk");
+import {render} from "react-dom";
 
 interface  IState {
 
@@ -18,10 +19,12 @@ class Dialog extends React.Component<IProps, IState> {
 
 const rootContainer = document.getElementById("root");
 
-const root = createRoot(rootContainer);
+//const root = createRoot(rootContainer);
 
 SDK.init();
 
 SDK.register("DeploymentsWidget.BuildDetails", () => {});
 
-root.render(<Dialog/>);
+//root.render(<Dialog/>);
+
+render(<Dialog/>, rootContainer);
