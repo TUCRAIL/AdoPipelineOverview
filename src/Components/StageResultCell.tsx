@@ -58,7 +58,7 @@ export class StageResultCell extends React.Component<IStageResultCellProps, Stag
             return this.renderInvalidBuild();
         }
         return (
-            <td className={"row"}>
+            <td data-testid="result-cell" className={"row"}>
                 <div
 
                     className={`stage ${this.getStageUnderlineClass(this.state.timelineRecord.state, this.state.timelineRecord.errorCount >= this.state.timelineRecord.attempt, this.state.timelineRecord.result)}`}>
@@ -79,7 +79,7 @@ export class StageResultCell extends React.Component<IStageResultCellProps, Stag
 
     renderInvalidBuild(): ReactElement<any, any> {
         return (
-            <td colSpan={99}>
+            <td data-testid="result-cell" colSpan={99}>
                 <p>There was an error preventing the pipeline to run (invalid
                     YAML, service connection not existing ...)</p>
             </td>

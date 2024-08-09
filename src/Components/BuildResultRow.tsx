@@ -3,6 +3,7 @@ import {BuildResultRowState, IBuildResultRowProps} from "../State";
 import {BuildResult, TaskResult} from "azure-devops-extension-api/Build";
 import {StageStatus} from "./StageStatus";
 import {StageResultCell} from "./StageResultCell";
+import {testDataIds} from "../Common";
 
 export class BuildResultRow extends React.Component<IBuildResultRowProps, BuildResultRowState>
 {
@@ -30,7 +31,7 @@ export class BuildResultRow extends React.Component<IBuildResultRowProps, BuildR
     }
 
     renderWithStages() : ReactElement<any, any> {
-        return (<tr data-testid="row-with-stage">
+        return (<tr data-testid={testDataIds.StageResultCell}>
             <td>
                 <a href={this.state.build.build._links.web.href} target={"_blank"}>
                     {this.state.build.build.buildNumber}
@@ -51,13 +52,13 @@ export class BuildResultRow extends React.Component<IBuildResultRowProps, BuildR
 
     renderWithoutStages() : ReactElement<any, any> {
         return (
-            <tr data-testid="row-without-stage">
+            <tr data-testid={testDataIds.StageResultCell}>
                 <td>
                     <a href={this.state.build.build._links.web.href} target={"_blank"}>
                         {this.state.build.build.buildNumber}
                     </a>
                 </td>
-                <td>
+                <td key={testDataIds.StageResultCell}>
                     <StageStatus
                         taskResult={this.getTaskResultFromBuildResult(this.state.build.build.result)}
                         failed={this.state.build.build.result === BuildResult.Failed}
