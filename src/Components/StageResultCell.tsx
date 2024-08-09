@@ -53,12 +53,18 @@ export class StageResultCell extends React.Component<IStageResultCellProps, Stag
     }
 
     renderValidCell(): ReactElement<any, any> {
+        if(this.state.timelineRecord === undefined)
+        {
+            return this.renderInvalidBuild();
+        }
         return (
-            <td key={this.state.timelineRecord.id} className={"row"}>
+            <td className={"row"}>
                 <div
+
                     className={`stage ${this.getStageUnderlineClass(this.state.timelineRecord.state, this.state.timelineRecord.errorCount >= this.state.timelineRecord.attempt, this.state.timelineRecord.result)}`}>
 
-                    <StageStatus taskResult={this.state.timelineRecord.result}
+                    <StageStatus
+                                 taskResult={this.state.timelineRecord.result}
                                  failed={this.state.timelineRecord.errorCount >= this.state.timelineRecord.attempt}
                                  stageStatus={this.state.timelineRecord.state === null ? undefined : this.state.timelineRecord.state}
                                  multiStage={this.state.isMultiStage}
@@ -73,8 +79,8 @@ export class StageResultCell extends React.Component<IStageResultCellProps, Stag
 
     renderInvalidBuild(): ReactElement<any, any> {
         return (
-            <td key={this.state.timelineRecord.id} colSpan={99}>
-                <p> There was an error preventing the pipeline to run (invalid
+            <td colSpan={99}>
+                <p>There was an error preventing the pipeline to run (invalid
                     YAML, service connection not existing ...)</p>
             </td>
         );

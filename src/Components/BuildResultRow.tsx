@@ -30,7 +30,7 @@ export class BuildResultRow extends React.Component<IBuildResultRowProps, BuildR
     }
 
     renderWithStages() : ReactElement<any, any> {
-        return (<tr key={this.state.build.build.buildNumber + this.state.build.build.startTime.toISOString() + "with-stage"}>
+        return (<tr data-testid="row-with-stage">
             <td>
                 <a href={this.state.build.build._links.web.href} target={"_blank"}>
                     {this.state.build.build.buildNumber}
@@ -51,7 +51,7 @@ export class BuildResultRow extends React.Component<IBuildResultRowProps, BuildR
 
     renderWithoutStages() : ReactElement<any, any> {
         return (
-            <tr key={this.state.build.build.buildNumber + this.state.build.build.startTime.toISOString() + "no-stage"}>
+            <tr data-testid="row-without-stage">
                 <td>
                     <a href={this.state.build.build._links.web.href} target={"_blank"}>
                         {this.state.build.build.buildNumber}

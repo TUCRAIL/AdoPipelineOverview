@@ -77,7 +77,7 @@ export class StageStatus extends React.Component<IStageStatusProps, IStageStatus
 
     }
 
-    render() : JSX.Element {
+    render() {
         return this.renderBadge();
     }
 }
