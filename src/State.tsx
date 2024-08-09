@@ -20,6 +20,12 @@ export class WidgetConfigurationSettings {
         this.showStages = showStages;
         this.matchAnyTag = matchAnyTag === undefined ? false : matchAnyTag;
     }
+
+    public static getEmptyObject() : WidgetConfigurationSettings {
+        return new WidgetConfigurationSettings(-1, "",
+            "", 1, "all",
+            true, false);
+    }
 }
 
 export interface IProps {

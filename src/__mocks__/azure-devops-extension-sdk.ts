@@ -1,4 +1,7 @@
 import {IHostContext, IUserContext} from "azure-devops-extension-sdk";
+import {EventArgs, Size} from "azure-devops-extension-api/Dashboard/WidgetContracts";
+import {WidgetSettings, WidgetStatus} from "./azure-devops-extension-api/Dashboard";
+import {CommonServiceIds} from "azure-devops-extension-api/Common";
 
 
 /**
@@ -7,6 +10,55 @@ import {IHostContext, IUserContext} from "azure-devops-extension-sdk";
  */
 export function init() : Promise<void> {
     return new Promise((resolve, reject) => resolve());
+}
+
+export let spyWidgetCallBackAccessor: IWidget;
+
+
+type IWidget = () => {
+    /** widgets use the settings provided along with the any cached data they may have to paint an interactive state. No network calls should be made by the widget.
+     *  @param {WidgetSettings} settings of the widget as available when the widget render is called by the host.
+     *  @returns object wrapped in a promise that encapsulates the success of this operation.
+     *          when this calls are completed and the experience is done loading.
+     */
+    preload: (widgetSettings: WidgetSettings) => Promise<WidgetStatus>;
+    /**
+     *  Widgets use the settings provided as well as server side calls to complete their rendering experience.
+     *  In the future, widgets are expected to provide a loading experience while the calls are being waited to be completed.
+     *  Until then, the widget host will provide the loading experience
+     *  @param {WidgetSettings} settings of the widget as available when the widget render is called by the host.
+     *  @returns object wrapped in a promise that encapsulates the success of this operation.
+     *          when this calls are completed and the experience is done loading.
+     */
+    load: (widgetSettings: WidgetSettings) => Promise<WidgetStatus>;
+    /**
+     * Widgets manage any operations that are not necessary for initial load but are required for the full widget experience.
+     */
+    onDashboardLoaded?: () => void;
+    /**
+     * The framework calls this method to determine if the widget should be disabled for users with stakeholder license
+     * @param {WidgetSettings} settings of the widget as available when the widget render is called by the host.
+     * @returns A boolean wrapped in a promise that determines if the widget should be disabled for users with stakeholder license
+     */
+    disableWidgetForStakeholders?: (widgetSettings: WidgetSettings) => Promise<boolean>;
+    /**
+     *  Run widget in lightboxed mode
+     *  @param {WidgetSettings} settings of the widget as available when the widget render is called by the host.
+     *  @param {LightboxSize} size of the lightbox
+     *  @returns object wrapped in a promise that encapsulates the success of this operation.
+     *          when this calls are completed and the experience is done loading.
+     */
+    lightbox?: (widgetSettings: WidgetSettings, lightboxSize: Size) => Promise<WidgetStatus>;
+    /**
+     *  Listen to message from host
+     * @param {string} type of event
+     * @param {eventArgs} arguments associated with the event.
+     */
+    listen?: <T>(event: string, eventArgs: EventArgs<T>) => void;
+}
+
+export function register(instanceId: string, instance: IWidget) : void {
+    spyWidgetCallBackAccessor = instance;
 }
 
 /**
@@ -61,8 +113,22 @@ export function getUser() : IUserContext {
     }
 }
 
-export const mockGetFieldValue = jest.fn(); // .getFieldValue()
+
+export const mockGetProject = jest.fn().mockReturnValue({
+    id: "buildClient",
+    name: "buildClient"
+});
 
 /**
  * Mocked getService returns mocked methods
  */
+export function getService(contributionId: string) {
+
+    switch(contributionId) {
+        case CommonServiceIds.ProjectPageService:
+            return {
+                // WorkItemFormService
+                getProject: mockGetProject,
+            }
+    }
+}

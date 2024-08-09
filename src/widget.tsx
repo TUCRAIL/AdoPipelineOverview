@@ -8,7 +8,7 @@ import {
     BuildRestClient,
     TimelineRecord,
 } from "azure-devops-extension-api/Build";
-import SDK from "azure-devops-extension-sdk";
+import * as SDK from "azure-devops-extension-sdk";
 import {getClient, CommonServiceIds/*, IHostPageLayoutService*/, IProjectPageService} from "azure-devops-extension-api/Common";
 import {ZeroData} from "azure-devops-ui/ZeroData";
 import {Dropdown} from "azure-devops-ui/Dropdown";
@@ -22,8 +22,9 @@ import {
 import {BuildWithTimeline} from "./Models/BuildWithTimeline";
 import {BuildResultRow} from "./Components/BuildResultRow";
 import {render} from "react-dom";
+import {showRootComponent} from "./Common";
 
-class Widget extends React.Component<IProps, WidgetState> implements IConfigurableWidget {
+export class Widget extends React.Component<IProps, WidgetState> implements IConfigurableWidget {
 
     //#region fields
 
@@ -360,13 +361,5 @@ class Widget extends React.Component<IProps, WidgetState> implements IConfigurab
     //#endregion
 }
 
-const rootContainer = document.getElementById("root");
-
-//const root = createRoot(rootContainer);
-
-//root.render(<Widget/>);
-
-render(<Widget/>, rootContainer);
-
-
+showRootComponent(<Widget></Widget>);
 

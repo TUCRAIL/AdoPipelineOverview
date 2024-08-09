@@ -1,6 +1,7 @@
 import {IVssRestClientOptions} from "azure-devops-extension-api/Common/Context";
 import {Build} from "azure-devops-extension-api/Build";
 import Mock = jest.Mock;
+import * as WebApi from "azure-devops-extension-api/WebApi/WebApi";
 
 export enum TaskResult {
     Succeeded = 0,
@@ -55,6 +56,7 @@ export const mockGetBuild = jest.fn().mockReturnValue({
         }
     },
     buildNumber: -1,
+    id: -1,
     result: BuildResult.Succeeded
 });
 
@@ -65,6 +67,7 @@ interface MockBuild {
         }
     },
     buildNumber: number,
+    id: number,
     result: BuildResult
 }
 
@@ -76,9 +79,12 @@ export function createBuild(result: BuildResult) {
             }
         },
         buildNumber: -1,
+        id: -1,
         result: result
     };
 }
+
+export const mockGetBuilds = jest.fn().mockReturnValue([{}]);
 
 export const mockGetTimeline = jest.fn().mockReturnValue({
     records: [
@@ -87,14 +93,16 @@ export const mockGetTimeline = jest.fn().mockReturnValue({
             result: TaskResult.Succeeded,
             state: TimelineRecordState.Completed,
             errorCount: 0,
-            attempt: 1
+            attempt: 1,
+            type: "Stage"
         },
         {
             id: "2",
             result: TaskResult.Succeeded,
             state: TimelineRecordState.Completed,
             errorCount: 0,
-            attempt: 1
+            attempt: 1,
+            type: "Stage"
         }
     ]
 });
@@ -121,7 +129,8 @@ export function createTimelineRecord(id: string, result?: TaskResult | undefined
         result: !result ? undefined : result,
         state: state,
         errorCount: errorCount,
-        attempt: 1
+        attempt: attempt,
+        type: "Stage"
     }
 }
 
@@ -171,8 +180,171 @@ export class BuildRestClient {
             throw new Error(`The project collection does not exists: ${project}`);
         }
     }
+
+    public getBuilds(project: string, definitions?: number[], queues?: number[], buildNumber?: string,
+                     minTime?: Date, maxTime?: Date, requestedFor?: string, reasonFilter?: BuildReason,
+                     statusFilter?: BuildStatus, resultFilter?: BuildResult, tagFilters?: string[],
+                     properties?: string[], top?: number, continuationToken?: string, maxBuildsPerDefinition?: number,
+                     deletedFilter?: QueryDeletedOption, queryOrder?: BuildQueryOrder, branchName?: string,
+                     buildIds?: number[],
+                     repositoryId?: string, repositoryType?: string): Promise<Build[]> {
+
+        if(project === "buildClient")
+        {
+            if(definitions && definitions.length > 0)
+            {
+                return new Promise((resolve) => resolve(mockGetBuilds() as any));
+            }
+            else {
+                return  new Promise((resolve) => []);
+            }
+        }
+        else {
+            throw new Error(`The project collection does not exists: ${project}`);
+        }
+    }
+
 }
 
 //#region Build Class
+
+export enum BuildReason {
+    /**
+     * No reason. This value should not be used.
+     */
+    None = 0,
+    /**
+     * The build was started manually.
+     */
+    Manual = 1,
+    /**
+     * The build was started for the trigger TriggerType.ContinuousIntegration.
+     */
+    IndividualCI = 2,
+    /**
+     * The build was started for the trigger TriggerType.BatchedContinuousIntegration.
+     */
+    BatchedCI = 4,
+    /**
+     * The build was started for the trigger TriggerType.Schedule.
+     */
+    Schedule = 8,
+    /**
+     * The build was started for the trigger TriggerType.ScheduleForced.
+     */
+    ScheduleForced = 16,
+    /**
+     * The build was created by a user.
+     */
+    UserCreated = 32,
+    /**
+     * The build was started manually for private validation.
+     */
+    ValidateShelveset = 64,
+    /**
+     * The build was started for the trigger ContinuousIntegrationType.Gated.
+     */
+    CheckInShelveset = 128,
+    /**
+     * The build was started by a pull request. Added in resource version 3.
+     */
+    PullRequest = 256,
+    /**
+     * The build was started when another build completed.
+     */
+    BuildCompletion = 512,
+    /**
+     * The build was started when resources in pipeline triggered it
+     */
+    ResourceTrigger = 1024,
+    /**
+     * The build was triggered for retention policy purposes.
+     */
+    Triggered = 1967,
+    /**
+     * All reasons.
+     */
+    All = 2031
+}
+
+export enum BuildStatus {
+    /**
+     * No status.
+     */
+    None = 0,
+    /**
+     * The build is currently in progress.
+     */
+    InProgress = 1,
+    /**
+     * The build has completed.
+     */
+    Completed = 2,
+    /**
+     * The build is cancelling
+     */
+    Cancelling = 4,
+    /**
+     * The build is inactive in the queue.
+     */
+    Postponed = 8,
+    /**
+     * The build has not yet started.
+     */
+    NotStarted = 32,
+    /**
+     * All status.
+     */
+    All = 47
+}
+
+export enum QueryDeletedOption {
+    /**
+     * Include only non-deleted builds.
+     */
+    ExcludeDeleted = 0,
+    /**
+     * Include deleted and non-deleted builds.
+     */
+    IncludeDeleted = 1,
+    /**
+     * Include only deleted builds.
+     */
+    OnlyDeleted = 2
+}
+
+export enum BuildQueryOrder {
+    /**
+     * Order by finish time ascending.
+     */
+    FinishTimeAscending = 2,
+    /**
+     * Order by finish time descending.
+     */
+    FinishTimeDescending = 3,
+    /**
+     * Order by queue time descending.
+     */
+    QueueTimeDescending = 4,
+    /**
+     * Order by queue time ascending.
+     */
+    QueueTimeAscending = 5,
+    /**
+     * Order by start time descending.
+     */
+    StartTimeDescending = 6,
+    /**
+     * Order by start time ascending.
+     */
+    StartTimeAscending = 7
+}
+
+export interface PagedList<T> extends Array<T> {
+    /**
+     * A string that can be passed to the same endpoint that returned this PagedList in order to retrieve the next page of results.
+     */
+    continuationToken: string | null;
+}
 
 //#endregion
