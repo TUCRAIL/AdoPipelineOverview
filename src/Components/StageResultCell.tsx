@@ -53,12 +53,22 @@ export class StageResultCell extends React.Component<IStageResultCellProps, Stag
     }
 
     renderValidCell(): ReactElement<any, any> {
+        if(this.state.timelineRecord === undefined)
+        {
+            return this.renderInvalidBuild();
+        }
+        const underlineClassName = `${this.getStageUnderlineClass(this.state.timelineRecord.state, 
+            this.state.timelineRecord.errorCount >= 
+            this.state.timelineRecord.attempt, 
+            this.state.timelineRecord.result)}`
         return (
-            <td key={this.state.timelineRecord.id} className={"row"}>
+            <td data-testid="result-cell" className={"row"}>
                 <div
-                    className={`stage ${this.getStageUnderlineClass(this.state.timelineRecord.state, this.state.timelineRecord.errorCount >= this.state.timelineRecord.attempt, this.state.timelineRecord.result)}`}>
+                    data-testid={underlineClassName}
+                    className={`stage ${underlineClassName}`}>
 
-                    <StageStatus taskResult={this.state.timelineRecord.result}
+                    <StageStatus
+                                 taskResult={this.state.timelineRecord.result}
                                  failed={this.state.timelineRecord.errorCount >= this.state.timelineRecord.attempt}
                                  stageStatus={this.state.timelineRecord.state === null ? undefined : this.state.timelineRecord.state}
                                  multiStage={this.state.isMultiStage}
@@ -73,15 +83,15 @@ export class StageResultCell extends React.Component<IStageResultCellProps, Stag
 
     renderInvalidBuild(): ReactElement<any, any> {
         return (
-            <td key={this.state.timelineRecord.id} colSpan={99}>
-                <p> There was an error preventing the pipeline to run (invalid
+            <td data-testid="result-cell" colSpan={99}>
+                <p>There was an error preventing the pipeline to run (invalid
                     YAML, service connection not existing ...)</p>
             </td>
         );
     }
 
     render() {
-        if(typeof this.state.timelineRecord === undefined) {
+        if(!this.state.timelineRecord) {
             return this.renderInvalidBuild();
         }
         else {

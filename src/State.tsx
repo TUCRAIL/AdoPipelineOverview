@@ -20,6 +20,12 @@ export class WidgetConfigurationSettings {
         this.showStages = showStages;
         this.matchAnyTag = matchAnyTag === undefined ? false : matchAnyTag;
     }
+
+    public static getEmptyObject() : WidgetConfigurationSettings {
+        return new WidgetConfigurationSettings(-1, "",
+            "", 1, "all",
+            true, false);
+    }
 }
 
 export interface IProps {
@@ -153,7 +159,7 @@ export interface IStageStatusState {
     multiStage: boolean
     startTime?: Date
     failed: boolean
-    taskResult?: TaskResult
+    taskResult?: TaskResult | undefined
 }
 
 interface ICloneable<T extends ICloneable<T>> {
@@ -191,7 +197,7 @@ export class BuildResultRowState {
 }
 
 export interface IStageResultCellProps {
-    timelineRecord: TimelineRecord
+    timelineRecord: TimelineRecord | undefined
     timelineIndex: number
     buildIndex: number
     isMultiStage: boolean
@@ -199,13 +205,13 @@ export interface IStageResultCellProps {
 }
 
 export class StageResultCellState {
-    timelineRecord: TimelineRecord
+    timelineRecord: TimelineRecord | undefined
     timelineIndex: number
     buildIndex: number
     isMultiStage: boolean
     previousTimelineRecordState: TimelineRecordState | undefined
 
-    constructor(timelineRecord: TimelineRecord, timelineIndex: number, buildIndex: number, isMultiStage: boolean, previousTimelineRecordState: TimelineRecordState | undefined) {
+    constructor(timelineRecord: TimelineRecord | undefined, timelineIndex: number, buildIndex: number, isMultiStage: boolean, previousTimelineRecordState: TimelineRecordState | undefined) {
         this.timelineRecord = timelineRecord;
         this.timelineIndex = timelineIndex;
         this.buildIndex = buildIndex;
