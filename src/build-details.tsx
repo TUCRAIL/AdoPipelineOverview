@@ -1,7 +1,7 @@
 //import {createRoot} from "react-dom/client";
 import React from "react";
 import {IProps} from "./State";
-import SDK = require("azure-devops-extension-sdk");
+import SDK from "azure-devops-extension-sdk";
 import {render} from "react-dom";
 
 interface  IState {

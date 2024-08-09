@@ -8,7 +8,7 @@ import {
     BuildRestClient,
     TimelineRecord,
 } from "azure-devops-extension-api/Build";
-import SDK = require("azure-devops-extension-sdk");
+import SDK from "azure-devops-extension-sdk";
 import {getClient} from "azure-devops-extension-api";
 import {ZeroData} from "azure-devops-ui/ZeroData";
 import {Dropdown} from "azure-devops-ui/Dropdown";
