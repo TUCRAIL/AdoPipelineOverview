@@ -1,5 +1,6 @@
 import {IVssRestClientOptions} from "azure-devops-extension-api/Common/Context";
 import {Build} from "azure-devops-extension-api/Build";
+import Mock = jest.Mock;
 
 export enum TaskResult {
     Succeeded = 0,
@@ -57,20 +58,72 @@ export const mockGetBuild = jest.fn().mockReturnValue({
     result: BuildResult.Succeeded
 });
 
+interface MockBuild {
+    _links: {
+        web: {
+            href: string
+        }
+    },
+    buildNumber: number,
+    result: BuildResult
+}
+
+export function createBuild(result: BuildResult) {
+    return {
+        _links: {
+            web: {
+                href: "https://buildUrl.com"
+            }
+        },
+        buildNumber: -1,
+        result: result
+    };
+}
+
 export const mockGetTimeline = jest.fn().mockReturnValue({
     records: [
         {
             id: "1",
             result: TaskResult.Succeeded,
-            state: TimelineRecordState.Completed
+            state: TimelineRecordState.Completed,
+            errorCount: 0,
+            attempt: 1
         },
         {
             id: "2",
             result: TaskResult.Succeeded,
-            state: TimelineRecordState.Completed
+            state: TimelineRecordState.Completed,
+            errorCount: 0,
+            attempt: 1
         }
     ]
 });
+
+interface MockTimelineRecord {
+    id: string, result?: TaskResult | undefined, state?: TimelineRecordState,
+    errorCount?: number, attempt?: number
+}
+
+export function createRecordsForTimeline(records : MockTimelineRecord[]) {
+    let recordArray : MockTimelineRecord[]  = [];
+    for (const record of records) {
+        recordArray.push(createTimelineRecord(record.id, record.result, record.state, record.errorCount, record.attempt));
+    }
+    return {
+        records: recordArray
+    };
+}
+
+export function createTimelineRecord(id: string, result?: TaskResult | undefined, state?: TimelineRecordState,
+                                     errorCount = 0, attempt: number = 1) {
+    return {
+        id: id,
+        result: !result ? undefined : result,
+        state: state,
+        errorCount: errorCount,
+        attempt: 1
+    }
+}
 
 export class BuildRestClient {
     constructor(options: IVssRestClientOptions) {

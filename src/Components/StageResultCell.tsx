@@ -57,11 +57,15 @@ export class StageResultCell extends React.Component<IStageResultCellProps, Stag
         {
             return this.renderInvalidBuild();
         }
+        const underlineClassName = `${this.getStageUnderlineClass(this.state.timelineRecord.state, 
+            this.state.timelineRecord.errorCount >= 
+            this.state.timelineRecord.attempt, 
+            this.state.timelineRecord.result)}`
         return (
             <td data-testid="result-cell" className={"row"}>
                 <div
-
-                    className={`stage ${this.getStageUnderlineClass(this.state.timelineRecord.state, this.state.timelineRecord.errorCount >= this.state.timelineRecord.attempt, this.state.timelineRecord.result)}`}>
+                    data-testid={underlineClassName}
+                    className={`stage ${underlineClassName}`}>
 
                     <StageStatus
                                  taskResult={this.state.timelineRecord.result}
@@ -87,7 +91,7 @@ export class StageResultCell extends React.Component<IStageResultCellProps, Stag
     }
 
     render() {
-        if(typeof this.state.timelineRecord === undefined) {
+        if(!this.state.timelineRecord) {
             return this.renderInvalidBuild();
         }
         else {

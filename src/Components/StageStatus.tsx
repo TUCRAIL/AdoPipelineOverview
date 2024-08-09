@@ -22,7 +22,7 @@ export class StageStatus extends React.Component<IStageStatusProps, IStageStatus
 
     renderBadge(): ReactElement<any, any> {
 
-        if (this.state.taskResult === null) {
+        if (this.state.taskResult === null || typeof this.state.taskResult === undefined || this.state.taskResult === undefined) {
             if (this.state.stageStatus === TimelineRecordState.Pending) {
                 if ((this.state.previousStatus === null && this.state.multiStage) || (this.state.previousStatus !== null && this.state.previousStatus !== TimelineRecordState.Completed)) {
                     return (

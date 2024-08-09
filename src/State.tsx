@@ -153,7 +153,7 @@ export interface IStageStatusState {
     multiStage: boolean
     startTime?: Date
     failed: boolean
-    taskResult?: TaskResult
+    taskResult?: TaskResult | undefined
 }
 
 interface ICloneable<T extends ICloneable<T>> {
