@@ -2,7 +2,12 @@ import * as SDK from "azure-devops-extension-sdk";
 import {ObservableValue} from "azure-devops-ui/Core/Observable";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import { Toggle } from "azure-devops-ui/Toggle";
-import * as Dashboard from "azure-devops-extension-api/Dashboard";
+import {
+    WidgetConfigurationSave,
+    IWidgetConfiguration,
+    IWidgetConfigurationContext,
+    WidgetSettings, WidgetStatusHelper, WidgetStatus
+} from "azure-devops-extension-api/Dashboard";
 
 import React = require("react")
 import {
@@ -20,12 +25,12 @@ import {GitRestClient} from "azure-devops-extension-api/Git";
 import {CommonServiceIds, IProjectPageService, getClient} from "azure-devops-extension-api/Common";
 import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
-//import {render} from "react-dom/client";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 import {ConfigurationWidgetState, IProps, WidgetConfigurationSettings} from "./State";
-import {render} from "react-dom";
+import {showRootComponent} from "./Common";
+import {startsWith} from "azure-devops-ui/Core/Util/String";
 
-export class ConfigurationWidget extends React.Component<IProps, ConfigurationWidgetState> implements Dashboard.IWidgetConfiguration{
+export class ConfigurationWidget extends React.Component<IProps, ConfigurationWidgetState> implements IWidgetConfiguration{
     //#region fields
 
     private projectId = "";
@@ -33,7 +38,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     private selectedBuildDefinition = new ObservableValue<string>("");
     private tagDropdownMultiSelection = new DropdownMultiSelection();
 
-    private widgetConfigurationContext?: Dashboard.IWidgetConfigurationContext;
+    private widgetConfigurationContext?: IWidgetConfigurationContext;
 
     private branchItems : IListBoxItem[] = [];
 
@@ -75,33 +80,34 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         return await this.validateConfiguration();
     }
 
-    async preload(_widgetSettings: Dashboard.WidgetSettings) {
-        return Dashboard.WidgetStatusHelper.Success();
+    async preload(_widgetSettings: WidgetSettings) {
+        return WidgetStatusHelper.Success();
     }
 
     async load(
-        widgetSettings: Dashboard.WidgetSettings,
-        widgetConfigurationContext: Dashboard.IWidgetConfigurationContext
-    ): Promise<Dashboard.WidgetStatus> {
+        widgetSettings: WidgetSettings,
+        widgetConfigurationContext: IWidgetConfigurationContext
+    ): Promise<WidgetStatus> {
         try {
             this.widgetConfigurationContext = widgetConfigurationContext;
             await this.setStateFromWidgetSettings(widgetSettings);
-            return Dashboard.WidgetStatusHelper.Success();
+            return WidgetStatusHelper.Success();
         } catch (e) {
-            console.error()
-            return Dashboard.WidgetStatusHelper.Success((e as any).toString());
-            //return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
+            console.error(e)
+            return WidgetStatusHelper.Success((e as any).toString());
+            //return WidgetStatusHelper.Failure((e as any).toString());
         }
     }
 
     async reload(
-        widgetSettings: Dashboard.WidgetSettings
-    ): Promise<Dashboard.WidgetStatus> {
+        widgetSettings: WidgetSettings
+    ): Promise<WidgetStatus> {
         try {
             await this.setStateFromWidgetSettings(widgetSettings);
-            return Dashboard.WidgetStatusHelper.Success();
+            return WidgetStatusHelper.Success();
         } catch (e) {
-            return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
+            console.error(e)
+            return WidgetStatusHelper.Failure((e as any).toString());
         }
     }
 
@@ -114,7 +120,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      * @param widgetSettings The widget settings to convert
      * @private
      */
-    private async setStateFromWidgetSettings(widgetSettings: Dashboard.WidgetSettings) {
+    private async setStateFromWidgetSettings(widgetSettings: WidgetSettings) {
         const settings = widgetSettings.customSettings.data;
         if(settings === null || settings === undefined || typeof settings === "undefined")
         {
@@ -146,7 +152,8 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         const repositoryBranches = await codeClient.getBranches(definitionRepositoryId,
             this.projectId, undefined);
 
-        const branchesArray = repositoryBranches.map((branch) => `refs/heads/${branch.name}`)
+        const branchesArray = repositoryBranches.map((branch) => startsWith(branch.name, '/refs/heads/') ?
+            branch.name : `refs/heads/${branch.name}`)
             .filter((value, index, self) => self.indexOf(value) === index);
 
         console.debug(`Starting to populate the branch dropdown. ${branchesArray.length} branches to add`);
@@ -171,18 +178,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                 foundMatchingBranch = true;
                 console.debug("Found matching branch")
             }
-            // if(branch === buildBranch)
-            // {
-            //     this.setState((state, props) => ({
-            //         buildBranch: branch
-            //     }));
-            // }
-            // else {
-            //     this.setState((state, props) => ({
-            //             buildBranch: ""
-            //         }
-            //     ));
-            // }
             console.debug("Adding branch " + branch);
         });
 
@@ -220,24 +215,33 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             });
         }
 
+        let tagFound : boolean = false;
+
         if(this.state.selectedTag !== "all" && this.state.selectedTag !== "")
         {
             const tagArray = this.state.selectedTag.split(",");
             for (const tag of tagArray) {
                 const index = this.tagItems.findIndex((item) => item.id === tag);
                 if (index !== -1) {
+                    tagFound = true;
                     this.tagDropdownMultiSelection.select(index, undefined, true, true);
                 }
             }
-            this.setState({
-                selectedTag: this.state.selectedTag
-            })
+            if(tagFound)
+            {
+                this.setState({
+                    selectedTag: this.state.selectedTag
+                });
+            }
+
         }
-        else {
+        if(!tagFound)
+        {
             this.setState({
                 selectedTag: "all"
             });
         }
+
 
     }
 
@@ -279,7 +283,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      * Validates the configuration of the widget
      * @private
      */
-    private async validateConfiguration() : Promise<Dashboard.SaveStatus>
+    private async validateConfiguration() : Promise<SaveStatus>
     {
         try {
             let branchName = this.state.selectedBranch;
@@ -318,10 +322,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             {
                 console.debug("Invalid configuration: \n" +
                     errorMessage);
-                return Dashboard.WidgetConfigurationSave.Invalid();
-                // await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationError, {
-                //     data: errorMessage
-                // });
+                return WidgetConfigurationSave.Invalid();
             }
             else {
                 const customSettings: CustomSettings = {
@@ -330,12 +331,12 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                 console.debug("Configuration is valid");
                 await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationChange,
                     ConfigurationEvent.Args(customSettings));
-                return  Dashboard.WidgetConfigurationSave.Valid(customSettings);
+                return  WidgetConfigurationSave.Valid(customSettings);
             }
         }
         catch (e) {
             console.error(e);
-            return Dashboard.WidgetConfigurationSave.Invalid();
+            return WidgetConfigurationSave.Invalid();
         }
     }
 
@@ -348,7 +349,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      * @param _event
      * @param selectedDropdown
      */
-    private onBuildDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+    private onBuildDropdownChange = async (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
         this.setState({
             isBranchDropdownDisabled: true,
             selectedTag: 'all',
@@ -362,9 +363,8 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         });
         this.buildDefinitionItems!.find(d =>
             Number(this.getDataAsBuildReference(d).id) === Number(this.getDataAsBuildReference(selectedDropdown.data!).id));
-        this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'all')
-            .then();
-        this.fillTagsDropDown().then();
+        await this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'all');
+        await this.fillTagsDropDown();
 
         console.debug(`Selected new build definition ${this.state.selectedBuildDefinitionId}`);
     };
@@ -502,7 +502,8 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                 </div>
                 <div id={"tags"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <label>Tags: </label>
-                    <Dropdown items={this.tagItems}
+                    <Dropdown role={"tag-dropdown"}
+                                items={this.tagItems}
                               className={"dropdown-element"}
                               actions={[
                                   {
@@ -545,15 +546,4 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     //#endregion
 }
 
-//#region classes and interfaces
-
-
-//#endregion
-
-const rootContainer = document.getElementById("root");
-
-//const root = createRoot(rootContainer);
-
-render(<ConfigurationWidget/>, rootContainer);
-
-//root.render(<ConfigurationWidget/>);
+showRootComponent(<ConfigurationWidget/>);

@@ -1,5 +1,6 @@
 import {TaskResult, TimelineRecord, TimelineRecordState} from "azure-devops-extension-api/Build";
 import {BuildWithTimeline} from "./Models/BuildWithTimeline";
+import {SemanticVersion} from "azure-devops-extension-api/Dashboard/Dashboard";
 
 export class WidgetConfigurationSettings {
     public buildDefinition: number;
@@ -20,6 +21,17 @@ export class WidgetConfigurationSettings {
         this.showStages = showStages;
         this.matchAnyTag = matchAnyTag === undefined ? false : matchAnyTag;
     }
+
+    public static getEmptyObject() : WidgetConfigurationSettings {
+        return new WidgetConfigurationSettings(-1, "",
+            "", 1, "all",
+            true, false);
+    }
+
+    public clone() : WidgetConfigurationSettings {
+        return new WidgetConfigurationSettings(this.buildDefinition, this.buildBranch, this.definitionName,
+            this.buildCount as number, this.defaultTag, this.showStages, this.matchAnyTag);
+    }
 }
 
 export interface IProps {
@@ -34,6 +46,8 @@ export class ConfigurationWidgetState {
     selectedBuildDefinitionId: number;
     selectedBranch: string;
     matchAnyTagSelected: boolean;
+
+    public static version = '2.0.0'
 
     constructor(selectedBuilDefinitionId: number, selectedBranch: string, selectedTag: string, buildCount: number, showStages: boolean, isBranchDropdownDisabled?: boolean, matchAnyTagSelected?: boolean) {
         this.selectedBuildDefinitionId = selectedBuilDefinitionId;
@@ -50,13 +64,9 @@ export class ConfigurationWidgetState {
             true, true, false);
     }
 
-    public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings) : ConfigurationWidgetState {
-        if(typeof settings.buildCount === "string")
-        {
-            settings.buildCount = parseInt(settings.buildCount)
-        }
+    public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version: string = '1.0.0') : ConfigurationWidgetState {
         return new ConfigurationWidgetState(settings.buildDefinition, settings.buildBranch, settings.defaultTag,
-            settings.buildCount, settings.showStages, settings.buildBranch === "", settings.matchAnyTag);
+            settings.buildCount as number, settings.showStages, settings.buildBranch === "", settings.matchAnyTag);
     }
 
     public static toWidgetConfigurationSettings(state: ConfigurationWidgetState, definitionName: string) : WidgetConfigurationSettings {
@@ -112,13 +122,9 @@ export class WidgetState {
             true, false);
     }
 
-    public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings) : WidgetState {
-        if(typeof settings.buildCount === "string")
-        {
-            settings.buildCount = parseInt(settings.buildCount)
-        }
+    public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version?: SemanticVersion) : WidgetState {
         return new WidgetState(settings.definitionName, settings.buildDefinition, settings.buildBranch, settings.defaultTag,
-            settings.buildCount, settings.showStages, settings.matchAnyTag);
+            settings.buildCount as number, settings.showStages, settings.matchAnyTag);
     }
 
     public clone() : WidgetState {
@@ -153,7 +159,7 @@ export interface IStageStatusState {
     multiStage: boolean
     startTime?: Date
     failed: boolean
-    taskResult?: TaskResult
+    taskResult?: TaskResult | undefined
 }
 
 interface ICloneable<T extends ICloneable<T>> {
@@ -182,16 +188,18 @@ export class BuildResultRowState {
     }
 
     public static getPreviousTimelineRecordStateForIndex(records: TimelineRecord[], index: number) : TimelineRecordState | undefined {
-        return (index > 0 &&
-            records.length > 1
-            && records[index - 1].state !== undefined) ?
-            records[index - 1].state
-            : undefined
+        if(index > 0 && records.length > 1 &&  records[index - 1].state !== undefined)
+        {
+            return records[index - 1].state;
+        }
+        else {
+            return  undefined;
+        }
     }
 }
 
 export interface IStageResultCellProps {
-    timelineRecord: TimelineRecord
+    timelineRecord: TimelineRecord | undefined
     timelineIndex: number
     buildIndex: number
     isMultiStage: boolean
@@ -199,13 +207,13 @@ export interface IStageResultCellProps {
 }
 
 export class StageResultCellState {
-    timelineRecord: TimelineRecord
+    timelineRecord: TimelineRecord | undefined
     timelineIndex: number
     buildIndex: number
     isMultiStage: boolean
     previousTimelineRecordState: TimelineRecordState | undefined
 
-    constructor(timelineRecord: TimelineRecord, timelineIndex: number, buildIndex: number, isMultiStage: boolean, previousTimelineRecordState: TimelineRecordState | undefined) {
+    constructor(timelineRecord: TimelineRecord | undefined, timelineIndex: number, buildIndex: number, isMultiStage: boolean, previousTimelineRecordState: TimelineRecordState | undefined) {
         this.timelineRecord = timelineRecord;
         this.timelineIndex = timelineIndex;
         this.buildIndex = buildIndex;

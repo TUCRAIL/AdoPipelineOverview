@@ -1,6 +1,6 @@
 import "azure-devops-ui/Core/override.css";
-import {CommonServiceIds/*, IHostPageLayoutService*/, IProjectPageService} from "azure-devops-extension-api";
-import * as Dashboard from "azure-devops-extension-api/Dashboard";
+import {WidgetSettings, IConfigurableWidget, WidgetStatusHelper, WidgetStatus}
+    from "azure-devops-extension-api/Dashboard";
 import React from "react";
 //import { createRoot } from 'react-dom/client';
 import {
@@ -8,8 +8,8 @@ import {
     BuildRestClient,
     TimelineRecord,
 } from "azure-devops-extension-api/Build";
-import SDK from "azure-devops-extension-sdk";
-import {getClient} from "azure-devops-extension-api";
+import * as SDK from "azure-devops-extension-sdk";
+import {getClient, CommonServiceIds/*, IHostPageLayoutService*/, IProjectPageService} from "azure-devops-extension-api/Common";
 import {ZeroData} from "azure-devops-ui/ZeroData";
 import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
@@ -21,9 +21,9 @@ import {
 } from "./State";
 import {BuildWithTimeline} from "./Models/BuildWithTimeline";
 import {BuildResultRow} from "./Components/BuildResultRow";
-import {render} from "react-dom";
+import {showRootComponent} from "./Common";
 
-class Widget extends React.Component<IProps, WidgetState> implements Dashboard.IConfigurableWidget {
+export class Widget extends React.Component<IProps, WidgetState> implements IConfigurableWidget {
 
     //#region fields
 
@@ -46,16 +46,16 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
         });
     }
 
-    async preload(_widgetSettings: Dashboard.WidgetSettings) {
+    async preload(_widgetSettings: WidgetSettings) {
         const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
         const projectInfo = await projectService.getProject();
         this.projectId = projectInfo?.id ?? "";
-        return Dashboard.WidgetStatusHelper.Success();
+        return WidgetStatusHelper.Success();
     }
 
     async load(
-        widgetSettings: Dashboard.WidgetSettings
-    ): Promise<Dashboard.WidgetStatus> {
+        widgetSettings: WidgetSettings
+    ): Promise<WidgetStatus> {
         try {
             console.debug("Loading widget data")
             const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
@@ -66,22 +66,23 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
                 this.setState(null);
             }
             else {
-                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings));
+                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings,
+                    widgetSettings.customSettings.version));
                 await this.fillTagsDropDown();
             }
-            return Dashboard.WidgetStatusHelper.Success();
+            return WidgetStatusHelper.Success();
         } catch (e) {
             console.error("Failed loading the widget data")
             console.error(e)
-            return Dashboard.WidgetStatusHelper.Success();
-            //return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
+            return WidgetStatusHelper.Success();
+            //return WidgetStatusHelper.Failure((e as any).toString());
         }
     }
 
     //@ts-ignore
     async reload(
-        widgetSettings: Dashboard.WidgetSettings
-    ): Promise<Dashboard.WidgetStatus | undefined> {
+        widgetSettings: WidgetSettings
+    ): Promise<WidgetStatus | undefined> {
         try {
             console.debug("Reloading widget data")
             console.debug(JSON.stringify(widgetSettings.customSettings.data))
@@ -91,13 +92,14 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
                 this.setState(null);
             }
             else {
-                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings));
+                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings,
+                    widgetSettings.customSettings.version));
             }
-            return Dashboard.WidgetStatusHelper.Success();
+            return WidgetStatusHelper.Success();
         } catch (e) {
             console.error("Failed reloading the widget data")
             console.error(e)
-            return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
+            return WidgetStatusHelper.Failure((e as any).toString());
         }
     }
 
@@ -360,13 +362,5 @@ class Widget extends React.Component<IProps, WidgetState> implements Dashboard.I
     //#endregion
 }
 
-const rootContainer = document.getElementById("root");
-
-//const root = createRoot(rootContainer);
-
-//root.render(<Widget/>);
-
-render(<Widget/>, rootContainer);
-
-
+showRootComponent(<Widget></Widget>);
 
