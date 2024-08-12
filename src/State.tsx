@@ -113,7 +113,7 @@ export class WidgetState {
     selectedDefinitionName: string;
     selectedBuildDefinitionId: number;
     selectedBranch: string;
-    selectedTag: string;
+    selectedTag: string | undefined;
     buildCount: number;
     showStages: boolean;
     matchAnyTagSelected: boolean;
@@ -150,7 +150,7 @@ export class WidgetState {
     }
 
     public clone() : WidgetState {
-        return new WidgetState(this.selectedDefinitionName, this.selectedBuildDefinitionId, this.selectedBranch, this.selectedTag,
+        return new WidgetState(this.selectedDefinitionName, this.selectedBuildDefinitionId, this.selectedBranch, this.selectedTag ?? "all",
             this.buildCount, this.showStages, this.matchAnyTagSelected);
     }
 
