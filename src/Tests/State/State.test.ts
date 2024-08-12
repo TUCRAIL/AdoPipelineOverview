@@ -124,6 +124,13 @@ describe("State", () => {
 
             expect(emptyState).toEqual(expectedState);
         });
+
+        test("State - WidgetConfigurationSettings - Can clone object", () => {
+            const emptyState = WidgetConfigurationSettings.getEmptyObject();
+            const expectedState = emptyState.clone();
+
+            expect(emptyState).toEqual(expectedState);
+        });
     });
 
     describe("BuildResultRowState", () => {

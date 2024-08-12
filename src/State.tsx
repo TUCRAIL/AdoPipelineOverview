@@ -27,6 +27,11 @@ export class WidgetConfigurationSettings {
             "", 1, "all",
             true, false);
     }
+
+    public clone() : WidgetConfigurationSettings {
+        return new WidgetConfigurationSettings(this.buildDefinition, this.buildBranch, this.definitionName,
+            this.buildCount as number, this.defaultTag, this.showStages, this.matchAnyTag);
+    }
 }
 
 export interface IProps {
