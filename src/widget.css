@@ -30,22 +30,22 @@
 
 .success {
     text-align: center;
-      box-sizing: inherit;
-      flex-shrink: 0;
-      align-self: center;
-      fill: currentColor;
-      margin: 10px;
-      color: rgba(85, 163, 98, 1);
+    box-sizing: inherit;
+    flex-shrink: 0;
+    align-self: center;
+    fill: currentColor;
+    margin: 10px;
+    color: rgba(85, 163, 98, 1);
 }
 
 .failed {
-text-align: center;
-box-sizing: inherit;
-flex-shrink: 0;
-align-self: center;
-fill: currentColor;
-margin: 10px;
-color: rgba(205, 74, 69, 1);
+    text-align: center;
+    box-sizing: inherit;
+    flex-shrink: 0;
+    align-self: center;
+    fill: currentColor;
+    margin: 10px;
+    color: rgba(205, 74, 69, 1);
 }
 
 .waiting {
@@ -142,4 +142,136 @@ a {
 .widget-tag-dropdown {
     float: right;
     width: 15em;
+}
+
+/*
+    This stylesheet is meant to be used by any widget that wants to make use of the styles from the Widget SDK
+*/
+.widget {
+    padding: 10px 14px;
+    height: inherit;
+    overflow: hidden;
+    cursor: default;
+}
+
+.widget h1, .widget h2, .widget h3, .widget h4, .widget h5, .widget h6 {
+    font-weight: normal;
+    margin-bottom: 5px;
+}
+
+.widget h1 {
+    font-size: 18px;
+}
+
+.widget h2 {
+    font-size: 16px;
+}
+
+.widget h3 {
+    font-size: 14px;
+}
+
+.widget h4, .widget h5, .widget h6 {
+    font-size: 12px;
+}
+
+.widget .truncated-text-ellipsis, .widget .title, .widget .title > .inner-title, .widget .title > .sub-title, .widget .title > .subtitle {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.widget .title {
+    font-size: 16px;
+    margin: 0 0 10px 0;
+}
+
+.widget .title > .sub-title,
+.widget .title > .subtitle {
+    color: rgba( 102, 102, 102 ,  1 );
+    color: rgba( var(--palette-neutral-60,102, 102, 102) ,  1 );
+    font-size: 12px;
+}
+
+.widget .description {
+    color: rgba( 102, 102, 102 ,  1 );
+    color: rgba( var(--palette-neutral-60,102, 102, 102) ,  1 );
+    font-size: 12px;
+    margin-bottom: 15px;
+}
+
+.widget a.link-with-icon-text {
+    display: block;
+}
+
+.widget a.link-with-icon-text .icon-container {
+    float: left;
+    margin-right: 10px;
+    height: 38px;
+    width: 38px;
+    display: block;
+}
+
+.widget ul.no-bullets, .widget ul.link-with-icon-text-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.widget ul.no-bullets li, .widget ul.link-with-icon-text-list li {
+    margin-bottom: 4px;
+}
+
+.widget ul.no-bullets li:last-child, .widget ul.link-with-icon-text-list li:last-child {
+    margin-bottom: 0;
+}
+
+.widget ul.link-with-icon-text-list li {
+    margin-bottom: 20px;
+}
+
+.widget .big-count {
+    font-size: 72px;
+    line-height: 72px;
+    margin: 5px 0 10px 0;
+    font-weight: 300;
+}
+
+.widget.clickable {
+    padding: 3px;
+}
+
+.widget.clickable > a {
+    display: block;
+    color: rgba(0, 0, 0, .9);
+    color: var(--text-primary-color,rgba(0, 0, 0, .9));
+    padding: 5px 9px;
+    border: 2px solid transparent;
+    height: 100%;
+}
+
+.widget.clickable > a:hover {
+    text-decoration: none;
+}
+
+.widget.clickable > a:focus {
+    outline: none;
+    border-color: rgba( 43, 136, 216 ,  1 );
+    border-color: rgba( var(--palette-primary-tint-10,43, 136, 216) ,  1 );
+}
+
+.legacy-shim .widget a:hover {
+    text-decoration: none;
+}
+
+.dark-widget .widget {
+    color: #FFFFFF;
+}
+
+.dark-widget .widget.clickable > a {
+    color: #FFFFFF;
+}
+
+.dark-widget .widget.clickable > a:focus {
+    border-color: #FFFFFF;
 }
