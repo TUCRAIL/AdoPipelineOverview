@@ -7,7 +7,7 @@ export class WidgetConfigurationSettings {
     public buildBranch: string;
     public definitionName: string;
     public buildCount: number | string;
-    public defaultTag: string;
+    public defaultTag: string | undefined;
     public showStages: boolean;
     public matchAnyTag: boolean = false;
 
@@ -30,7 +30,7 @@ export class WidgetConfigurationSettings {
 
     public clone() : WidgetConfigurationSettings {
         return new WidgetConfigurationSettings(this.buildDefinition as number, this.buildBranch, this.definitionName,
-            this.buildCount as number, this.defaultTag, this.showStages, this.matchAnyTag);
+            this.buildCount as number, this.defaultTag ?? "all", this.showStages, this.matchAnyTag);
     }
 }
 
@@ -71,12 +71,12 @@ export class ConfigurationWidgetState {
             {
                 settings.buildCount = parseInt(settings.buildCount);
             }
-            if(typeof settings.buildDefinition! === "string")
+            if(typeof settings.buildDefinition === "string")
             {
                 settings.buildDefinition = parseInt(settings.buildDefinition);
             }
         }
-        return new ConfigurationWidgetState(settings.buildDefinition as number, settings.buildBranch, settings.defaultTag,
+        return new ConfigurationWidgetState(settings.buildDefinition as number, settings.buildBranch, settings.defaultTag ?? "all",
             settings.buildCount as number, settings.showStages, settings.buildBranch === "", settings.matchAnyTag);
     }
 
@@ -140,12 +140,12 @@ export class WidgetState {
             {
                 settings.buildCount = parseInt(settings.buildCount);
             }
-            if(typeof settings.buildDefinition! === "string")
+            if(typeof settings.buildDefinition === "string")
             {
                 settings.buildDefinition = parseInt(settings.buildDefinition);
             }
         }
-        return new WidgetState(settings.definitionName, settings.buildDefinition, settings.buildBranch, settings.defaultTag,
+        return new WidgetState(settings.definitionName, settings.buildDefinition, settings.buildBranch, settings.defaultTag ?? "all",
             settings.buildCount as number, settings.showStages, settings.matchAnyTag);
     }
 

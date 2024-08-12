@@ -217,7 +217,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
 
         let tagFound : boolean = false;
 
-        if(typeof this.state.selectedTag! === "string" && this.state.selectedTag !== "all" && this.state.selectedTag !== "")
+        if(typeof this.state.selectedTag === "string" && this.state.selectedTag !== "all" && this.state.selectedTag !== "")
         {
             const tagArray = this.state.selectedTag.split(",");
             for (const tag of tagArray) {
