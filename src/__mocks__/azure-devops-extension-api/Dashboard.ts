@@ -1,5 +1,5 @@
 import {SemanticVersion} from "azure-devops-extension-api/Dashboard/Dashboard";
-import {EventArgs, Size} from "azure-devops-extension-api/Dashboard/WidgetContracts";
+import {EventArgs, SaveStatus, Size} from "azure-devops-extension-api/Dashboard/WidgetContracts";
 
 export enum WidgetStatusType {
     /**
@@ -121,6 +121,90 @@ export interface WidgetSettings {
     lightboxOptions?: LightboxOptions;
 }
 
+export class NotifyResult {
+    /**
+     * Gets a response from the subscriber of the notification, if they provide one as part of the schema for the event.
+     * @returns A promise with the data representing the return payload serialized as a string.
+     */
+    getResponse(): Promise<string> {
+        return new Promise((resolve) => {
+            resolve("");
+        });
+    }
+}
 
+export class IWidgetConfigurationContext {
+    public notify<T>(event: string, eventArgs: EventArgs<T>)  : Promise<NotifyResult> {
+        const notifyResult = new NotifyResult();
+        if(event === ConfigurationEvent.ConfigurationChange) {
+            console.log("Configuration has been changed to the following : \n" +
+            JSON.stringify(eventArgs.data));
+            return new Promise((resolve) => {
+                resolve(notifyResult);
+            });
+        }
+        else {
+            throw new Error("Event not supported");
+        }
+    }
+}
+
+export class ConfigurationEvent {
+    /**
+     * Configuration has changed. When this event is notified, the preview is updated and Save button is enabled.
+     *
+     * The payload expected when notifying this event: { data: customSettings }
+     *
+     * {customSettings} is the serialized custom config settings pertaining to the widget.
+     */
+    static ConfigurationChange: string;
+    /**
+     * Configuration tries to execute API calls and fails. When this event is notified, the config does not render a view and we pass an error message to the configuration host.
+     *
+     * The payload expected when notifying this event: { data: string }
+     *
+     * {string} is the error message that is displayed at the top of the configuration.
+     */
+    static ConfigurationError: string;
+    /**
+     * Widget configuration general settings changed. When this event is notified, the widget name or widget size is updated.
+     *
+     * The payload expected when notifying this event: { data: { IGeneralSettings } }
+     *
+     * {generalSettings} is the serialized object containing WidgetName and WidgetSize
+     */
+    static GeneralSettingsChanged: string;
+    /**
+     * @param payload the event arguments we pass when we want to notify the configuration.
+     */
+    static Args<T>(payload: T): EventArgs<T> {
+        return { data: payload };
+    }
+}
+
+export class WidgetConfigurationSave {
+    /**
+     * method to encapsulate a valid state that is returned by the widget configuration
+     * @param customSettings settings from the widget configuration to be returned as part of this state.
+     * @returns promise encapsulating the state being returned.
+     */
+    static Valid(customSettings: CustomSettings): Promise<SaveStatus> {
+        console.log("Widget configuration has been validated with the following settings : \n" +
+        JSON.stringify(customSettings));
+        return new Promise((resolve) => {
+            resolve({ customSettings: customSettings, isValid: true });
+        });
+    }
+    /**
+     * method to encapsulate an invalid state that is returned by the widget configuration
+     * @returns promise encapsulating the state being returned.
+     */
+    static Invalid(): Promise<SaveStatus> {
+        console.error("Widget configuration is invalid");
+        return new Promise((resolve) => {
+            resolve({ isValid: false });
+        });
+    }
+}
 
 

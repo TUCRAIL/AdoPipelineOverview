@@ -2,23 +2,18 @@ import {ConfigurationWidgetState, WidgetConfigurationSettings, WidgetState} from
 import {
     BuildResult,
     mockGetBuild,
-    mockGetBuilds,
+    mockGetBuilds, mockGetDefinitions,
     mockGetTags,
     mockGetTimeline, TaskResult, TimelineRecordState
 } from "./azure-devops-extension-api/Build";
 import {mockGetProject} from "./azure-devops-extension-api/Common";
+import {WidgetSettings} from "azure-devops-extension-api/Dashboard";
 
 export function showRootComponent(component: React.ReactElement<any>) {}
 
-export  const filledWidgetConfiguration : WidgetConfigurationSettings = {
-    buildBranch: "all",
-    buildCount: "5",
-    defaultTag: "all",
-    buildDefinition: 1,
-    definitionName: "definitionName",
-    matchAnyTag: true,
-    showStages: false
-}
+export  const filledWidgetConfiguration : WidgetConfigurationSettings = new WidgetConfigurationSettings(1,
+    "all", "definitionName",
+    5, "all", false, true);
 
 export const filledWidgetConfigurationAsConfigurationState : ConfigurationWidgetState = new ConfigurationWidgetState(
     1,
@@ -61,7 +56,7 @@ export function resetMocks() {
         id: -1,
         result: BuildResult.Succeeded
     });
-    mockGetBuilds.mockReturnValue([{}]);
+    mockGetBuilds.mockReturnValue([]);
     mockGetTimeline.mockReturnValue({
         records: [
             {
@@ -86,4 +81,20 @@ export function resetMocks() {
         id: "buildClient",
         name: "buildClient"
     });
+    mockGetDefinitions.mockReturnValue([]);
+}
+
+export function getWidgetSettings(customData?: object) : WidgetSettings {
+    return {
+        name: "settings",
+        size: {
+            rowSpan: 3,
+            columnSpan: 3
+        },
+        lightboxOptions: undefined,
+        customSettings: {
+            version: undefined,
+            data: customData ? JSON.stringify(customData) : null!
+        }
+    }
 }

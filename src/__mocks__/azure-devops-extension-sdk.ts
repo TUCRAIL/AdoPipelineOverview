@@ -132,3 +132,14 @@ export function getService(contributionId: string) {
             }
     }
 }
+
+export function resize(width?: number, height?: number) {
+    if(width && width <= 0)
+    {
+        throw new Error("Width must be greater than 0");
+    }
+    if(height && height <= 0)
+    {
+        throw new Error("Height must be greater than 0");
+    }
+}

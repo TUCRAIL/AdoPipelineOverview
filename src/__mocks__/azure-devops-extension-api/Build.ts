@@ -1,7 +1,9 @@
 import {IVssRestClientOptions} from "azure-devops-extension-api/Common/Context";
-import {Build} from "azure-devops-extension-api/Build";
 import Mock = jest.Mock;
 import * as WebApi from "azure-devops-extension-api/WebApi/WebApi";
+import * as Graph from "azure-devops-extension-api/Graph/Graph";
+import * as TfsCore from "azure-devops-extension-api/Core/Core";
+import {Build} from "azure-devops-extension-api/Build";
 
 export enum TaskResult {
     Succeeded = 0,
@@ -84,7 +86,19 @@ export function createBuild(result: BuildResult) {
     };
 }
 
-export const mockGetBuilds = jest.fn().mockReturnValue([{}]);
+export const mockGetBuilds = jest.fn().mockReturnValue([]);
+
+export function createDefinition(id: number = 1, name: string = "definitionName") {
+    return {
+        id: id,
+        name: name,
+        repository: {
+            id: id
+        }
+    };
+}
+
+export const mockGetDefinitions = jest.fn().mockReturnValue([]);
 
 export const mockGetTimeline = jest.fn().mockReturnValue({
     records: [
@@ -198,6 +212,20 @@ export class BuildRestClient {
             else {
                 return  new Promise((resolve) => []);
             }
+        }
+        else {
+            throw new Error(`The project collection does not exists: ${project}`);
+        }
+    }
+
+    public getDefinitions(project: string, name?: string, repositoryId?: string, repositoryType?: string,
+                          queryOrder?: DefinitionQueryOrder, top?: number, continuationToken?: string,
+                          minMetricsTime?: Date, definitionIds?: number[], path?: string, builtAfter?: Date,
+                          notBuiltAfter?: Date, includeAllProperties?: boolean, includeLatestBuilds?: boolean,
+                          taskIdFilter?: string, processType?: number, yamlFilename?: string)
+        : Promise<BuildDefinitionReference[]> {
+        if(project === "buildClient") {
+            return new Promise((resolve) => resolve(mockGetDefinitions() as any));
         }
         else {
             throw new Error(`The project collection does not exists: ${project}`);
@@ -345,6 +373,114 @@ export interface PagedList<T> extends Array<T> {
      * A string that can be passed to the same endpoint that returned this PagedList in order to retrieve the next page of results.
      */
     continuationToken: string | null;
+}
+
+//#endregion
+
+//#region BuildDefinitionReference class
+export interface BuildDefinitionReference extends DefinitionReference {
+    _links: any;
+    /**
+     * The author of the definition.
+     */
+    authoredBy: IdentityRef;
+    /**
+     * A reference to the definition that this definition is a draft of, if this is a draft definition.
+     */
+    draftOf: DefinitionReference;
+    /**
+     * The list of drafts associated with this definition, if this is not a draft definition.
+     */
+    drafts: DefinitionReference[];
+    latestBuild: Build;
+    latestCompletedBuild: Build;
+}
+
+export interface IdentityRef{
+    /**
+     * Deprecated - Can be retrieved by querying the Graph user referenced in the "self" entry of the IdentityRef "_links" dictionary
+     */
+    directoryAlias: string;
+    id: string;
+    /**
+     * Deprecated - Available in the "avatar" entry of the IdentityRef "_links" dictionary
+     */
+    imageUrl: string;
+    /**
+     * Deprecated - Can be retrieved by querying the Graph membership state referenced in the "membershipState" entry of the GraphUser "_links" dictionary
+     */
+    inactive: boolean;
+    /**
+     * Deprecated - Can be inferred from the subject type of the descriptor (Descriptor.IsAadUserType/Descriptor.IsAadGroupType)
+     */
+    isAadIdentity: boolean;
+    /**
+     * Deprecated - Can be inferred from the subject type of the descriptor (Descriptor.IsGroupType)
+     */
+    isContainer: boolean;
+    isDeletedInOrigin: boolean;
+    /**
+     * Deprecated - not in use in most preexisting implementations of ToIdentityRef
+     */
+    profileUrl: string;
+    /**
+     * Deprecated - use Domain+PrincipalName instead
+     */
+    uniqueName: string;
+}
+
+export interface DefinitionReference {
+    /**
+     * The date this version of the definition was created.
+     */
+    createdDate: Date;
+    /**
+     * The ID of the referenced definition.
+     */
+    id: number;
+    /**
+     * The name of the referenced definition.
+     */
+    name: string;
+    /**
+     * The folder path of the definition.
+     */
+    path: string;
+    /**
+     * The definition revision number.
+     */
+    revision: number;
+    /**
+     * The definition's URI.
+     */
+    uri: string;
+    /**
+     * The REST URL of the definition.
+     */
+    url: string;
+}
+
+export enum DefinitionQueryOrder {
+    /**
+     * No order
+     */
+    None = 0,
+    /**
+     * Order by created on/last modified time ascending.
+     */
+    LastModifiedAscending = 1,
+    /**
+     * Order by created on/last modified time descending.
+     */
+    LastModifiedDescending = 2,
+    /**
+     * Order by definition name ascending.
+     */
+    DefinitionNameAscending = 3,
+    /**
+     * Order by definition name descending.
+     */
+    DefinitionNameDescending = 4
 }
 
 //#endregion
