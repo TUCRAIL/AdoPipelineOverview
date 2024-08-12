@@ -124,7 +124,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         let buildPages: Build[] = [];
         if(settings.matchAnyTagSelected)
         {
-            for(let tag of settings.selectedTag.split(',')) {
+            for(let tag of settings.selectedTag?.split(',') ?? []) {
                 let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
                     undefined, undefined, undefined, undefined, undefined, undefined, undefined,
                     settings.selectedTag === 'all' ? undefined : [tag], undefined, settings.buildCount, undefined,
@@ -136,7 +136,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         else {
             let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
                 undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                settings.selectedTag === 'all' ? undefined : settings.selectedTag.split(','), undefined, settings.buildCount, undefined,
+                settings.selectedTag === 'all' ? undefined : settings.selectedTag?.split(',') ?? [], undefined, settings.buildCount, undefined,
                 undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.selectedBranch === 'all' ? undefined : settings.selectedBranch,
                 undefined, undefined, undefined);
             buildPages = buildPages.concat(buildPage);
@@ -207,7 +207,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
 
         if(this.state.selectedTag !== "all" && this.state.selectedTag !== "")
         {
-            const tagArray = this.state.selectedTag.split(",");
+            const tagArray = this.state.selectedTag?.split(",") ?? [];
             for (const tag of tagArray) {
                 const index = this.tagItems.findIndex((item) => item.id === tag);
                 if (index !== -1) {
@@ -303,7 +303,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
             )
         }
         return this.state && (
-            <div id="widget-container">
+            <div id="widget-container" className={"widget"}>
 
                 <h2 className="title">
                     <div className="inner-title">{this.state.selectedDefinitionName ?? 'No definition found'}</div>
@@ -326,7 +326,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
                                       }
                                   ]}
                                   noItemsText={"No tag was found"}
-                                  placeholder={this.state.selectedTag === "" ? "Select a tag" : this.state.selectedTag}
+                                  placeholder={this.state?.selectedTag === "" ? "Select a tag" : this.state?.selectedTag ?? "all"}
                                   onSelect={this.onTagDropdownChange}
                                   selection={this.tagDropdownMultiSelection}
                                   className={"widget-tag-dropdown dropdown-element"}

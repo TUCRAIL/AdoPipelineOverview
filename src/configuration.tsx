@@ -128,7 +128,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         }
         else {
             const configuration = JSON.parse(settings) as WidgetConfigurationSettings;
-
+            this.selectedBuildDefinition.value = configuration.definitionName;
 
             this.setState(ConfigurationWidgetState.fromWidgetConfigurationSettings(configuration),
                 async () => {
@@ -217,7 +217,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
 
         let tagFound : boolean = false;
 
-        if(this.state.selectedTag !== "all" && this.state.selectedTag !== "")
+        if(typeof this.state.selectedTag === "string" && this.state.selectedTag !== "all" && this.state.selectedTag !== "")
         {
             const tagArray = this.state.selectedTag.split(",");
             for (const tag of tagArray) {
@@ -467,10 +467,11 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     //#region render
     public render() {
         return this.state && (
-            <div>
+            <div className={"widget-configuration"}>
                 <div id={"build_definition"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <label>Build Definition: </label>
                     <Dropdown items={this.buildDefinitionItems}
+                              width={320}
                               noItemsText={"No build definition was found"}
                               className={"dropdown-element"}
                               placeholder={this.state.selectedBuildDefinitionId === -1 ? "Select a build definition" : this.selectedBuildDefinition.value}
@@ -484,6 +485,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                     <label>Branch: </label>
                     <Dropdown items={this.branchItems}
                               noItemsText={"No branch was found"}
+                              width={320}
                               className={"dropdown-element"}
                               placeholder={this.state.selectedBranch === "" ? "Select a branch" : this.state.selectedBranch.replace("refs/heads/", "")}
                               onSelect={this.onBranchDropdownChange}
@@ -499,11 +501,12 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                         className={"dropdown-element"}
                         label={"Builds to show"}/>
 
-                </div>
+                "</div>"
                 <div id={"tags"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <label>Tags: </label>
                     <Dropdown role={"tag-dropdown"}
                                 items={this.tagItems}
+                              width={320}
                               className={"dropdown-element"}
                               actions={[
                                   {
@@ -517,8 +520,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                                   }
                               ]}
                               noItemsText={"No tag was found"}
-                              placeholder={this.state.selectedTag === "" ? "Select a tag" : this.state.selectedTag}
-                              onSelect={this.onTagDropdownChange}
+                              placeholder={this.state?.selectedTag === "" ? "Select a tag" : this.state?.selectedTag ?? "all"}                              onSelect={this.onTagDropdownChange}
                               selection={this.tagDropdownMultiSelection}
                               />
 

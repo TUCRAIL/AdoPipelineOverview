@@ -7,13 +7,13 @@ export class WidgetConfigurationSettings {
     public buildBranch: string;
     public definitionName: string;
     public buildCount: number | string;
-    public defaultTag: string;
+    public defaultTag: string | undefined;
     public showStages: boolean;
     public matchAnyTag: boolean = false;
 
     constructor(buildDefinition: number, buildBranch: string, definitionName: string, buildCount: number,
                 defaultTag: string, showStages: boolean, matchAnyTag?: boolean) {
-        this.buildDefinition = buildDefinition;
+        this.buildDefinition = buildDefinition as number;
         this.buildBranch = buildBranch;
         this.definitionName = definitionName;
         this.buildCount = buildCount;
@@ -29,8 +29,8 @@ export class WidgetConfigurationSettings {
     }
 
     public clone() : WidgetConfigurationSettings {
-        return new WidgetConfigurationSettings(this.buildDefinition, this.buildBranch, this.definitionName,
-            this.buildCount as number, this.defaultTag, this.showStages, this.matchAnyTag);
+        return new WidgetConfigurationSettings(this.buildDefinition as number, this.buildBranch, this.definitionName,
+            this.buildCount as number, this.defaultTag ?? "all", this.showStages, this.matchAnyTag);
     }
 }
 
@@ -64,20 +64,31 @@ export class ConfigurationWidgetState {
             true, true, false);
     }
 
-    public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version: string = '1.0.0') : ConfigurationWidgetState {
-        return new ConfigurationWidgetState(settings.buildDefinition, settings.buildBranch, settings.defaultTag,
+    public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version?: SemanticVersion) : ConfigurationWidgetState {
+        if(!version?.major || version.major === 1)
+        {
+            if(typeof settings.buildCount === "string")
+            {
+                settings.buildCount = parseInt(settings.buildCount);
+            }
+            if(typeof settings.buildDefinition === "string")
+            {
+                settings.buildDefinition = parseInt(settings.buildDefinition);
+            }
+        }
+        return new ConfigurationWidgetState(settings.buildDefinition as number, settings.buildBranch, settings.defaultTag ?? "all",
             settings.buildCount as number, settings.showStages, settings.buildBranch === "", settings.matchAnyTag);
     }
 
     public static toWidgetConfigurationSettings(state: ConfigurationWidgetState, definitionName: string) : WidgetConfigurationSettings {
-        return new WidgetConfigurationSettings(state.selectedBuildDefinitionId, state.selectedBranch, definitionName, state.buildCount,
+        return new WidgetConfigurationSettings(state.selectedBuildDefinitionId as number, state.selectedBranch, definitionName, state.buildCount,
             state.selectedTag, state.showStages, state.matchAnyTagSelected);
     }
 
     public clone() : ConfigurationWidgetState {
         //Do a conversion to ultimately make sure that no user still has a string for the build count
 
-        return new ConfigurationWidgetState(this.selectedBuildDefinitionId, this.selectedBranch, this.selectedTag,
+        return new ConfigurationWidgetState(this.selectedBuildDefinitionId as number, this.selectedBranch, this.selectedTag,
             this.buildCount, this.showStages, this.isBranchDropdownDisabled, this.matchAnyTagSelected);
     }
 
@@ -85,7 +96,7 @@ export class ConfigurationWidgetState {
 
     public copy(original : ConfigurationWidgetState)
     {
-        this.selectedBuildDefinitionId = original.selectedBuildDefinitionId;
+        this.selectedBuildDefinitionId = original.selectedBuildDefinitionId as number;
         this.selectedBranch = original.selectedBranch;
         this.selectedTag = original.selectedTag;
         this.buildCount = original.buildCount;
@@ -102,14 +113,14 @@ export class WidgetState {
     selectedDefinitionName: string;
     selectedBuildDefinitionId: number;
     selectedBranch: string;
-    selectedTag: string;
+    selectedTag: string | undefined;
     buildCount: number;
     showStages: boolean;
     matchAnyTagSelected: boolean;
 
     constructor(selectedDefinitionName: string, selectedBuildDefinitionId: number, selectedBranch: string, selectedTag: string, buildCount: number, showStages: boolean, matchAnyTagSelected?: boolean) {
         this.selectedDefinitionName = selectedDefinitionName;
-        this.selectedBuildDefinitionId = selectedBuildDefinitionId;
+        this.selectedBuildDefinitionId = selectedBuildDefinitionId as number;
         this.selectedBranch = selectedBranch;
         this.selectedTag = selectedTag;
         this.buildCount = buildCount;
@@ -123,12 +134,23 @@ export class WidgetState {
     }
 
     public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version?: SemanticVersion) : WidgetState {
-        return new WidgetState(settings.definitionName, settings.buildDefinition, settings.buildBranch, settings.defaultTag,
+        if(!version?.major || version.major === 1)
+        {
+            if(typeof settings.buildCount === "string")
+            {
+                settings.buildCount = parseInt(settings.buildCount);
+            }
+            if(typeof settings.buildDefinition === "string")
+            {
+                settings.buildDefinition = parseInt(settings.buildDefinition);
+            }
+        }
+        return new WidgetState(settings.definitionName, settings.buildDefinition, settings.buildBranch, settings.defaultTag ?? "all",
             settings.buildCount as number, settings.showStages, settings.matchAnyTag);
     }
 
     public clone() : WidgetState {
-        return new WidgetState(this.selectedDefinitionName, this.selectedBuildDefinitionId, this.selectedBranch, this.selectedTag,
+        return new WidgetState(this.selectedDefinitionName, this.selectedBuildDefinitionId, this.selectedBranch, this.selectedTag ?? "all",
             this.buildCount, this.showStages, this.matchAnyTagSelected);
     }
 
