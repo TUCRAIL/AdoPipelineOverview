@@ -21,7 +21,6 @@ import {
 } from "./State";
 import {BuildWithTimeline} from "./Models/BuildWithTimeline";
 import {BuildResultRow} from "./Components/BuildResultRow";
-import {render} from "react-dom";
 import {showRootComponent} from "./Common";
 
 export class Widget extends React.Component<IProps, WidgetState> implements IConfigurableWidget {
@@ -67,7 +66,8 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
                 this.setState(null);
             }
             else {
-                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings));
+                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings,
+                    widgetSettings.customSettings.version));
                 await this.fillTagsDropDown();
             }
             return WidgetStatusHelper.Success();
@@ -92,7 +92,8 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
                 this.setState(null);
             }
             else {
-                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings));
+                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings,
+                    widgetSettings.customSettings.version));
             }
             return WidgetStatusHelper.Success();
         } catch (e) {

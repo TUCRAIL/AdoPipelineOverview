@@ -20,10 +20,9 @@ import {GitRestClient} from "azure-devops-extension-api/Git";
 import {CommonServiceIds, IProjectPageService, getClient} from "azure-devops-extension-api/Common";
 import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
-//import {render} from "react-dom/client";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 import {ConfigurationWidgetState, IProps, WidgetConfigurationSettings} from "./State";
-import {render} from "react-dom";
+import {showRootComponent} from "./Common";
 
 export class ConfigurationWidget extends React.Component<IProps, ConfigurationWidgetState> implements Dashboard.IWidgetConfiguration{
     //#region fields
@@ -545,15 +544,4 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     //#endregion
 }
 
-//#region classes and interfaces
-
-
-//#endregion
-
-const rootContainer = document.getElementById("root");
-
-//const root = createRoot(rootContainer);
-
-render(<ConfigurationWidget/>, rootContainer);
-
-//root.render(<ConfigurationWidget/>);
+showRootComponent(<ConfigurationWidget/>);

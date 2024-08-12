@@ -1,5 +1,6 @@
 import {TaskResult, TimelineRecord, TimelineRecordState} from "azure-devops-extension-api/Build";
 import {BuildWithTimeline} from "./Models/BuildWithTimeline";
+import {SemanticVersion} from "azure-devops-extension-api/Dashboard/Dashboard";
 
 export class WidgetConfigurationSettings {
     public buildDefinition: number;
@@ -41,6 +42,8 @@ export class ConfigurationWidgetState {
     selectedBranch: string;
     matchAnyTagSelected: boolean;
 
+    public static version = '2.0.0'
+
     constructor(selectedBuilDefinitionId: number, selectedBranch: string, selectedTag: string, buildCount: number, showStages: boolean, isBranchDropdownDisabled?: boolean, matchAnyTagSelected?: boolean) {
         this.selectedBuildDefinitionId = selectedBuilDefinitionId;
         this.selectedBranch = selectedBranch;
@@ -56,13 +59,9 @@ export class ConfigurationWidgetState {
             true, true, false);
     }
 
-    public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings) : ConfigurationWidgetState {
-        if(typeof settings.buildCount === "string")
-        {
-            settings.buildCount = parseInt(settings.buildCount)
-        }
+    public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version: string = '1.0.0') : ConfigurationWidgetState {
         return new ConfigurationWidgetState(settings.buildDefinition, settings.buildBranch, settings.defaultTag,
-            settings.buildCount, settings.showStages, settings.buildBranch === "", settings.matchAnyTag);
+            settings.buildCount as number, settings.showStages, settings.buildBranch === "", settings.matchAnyTag);
     }
 
     public static toWidgetConfigurationSettings(state: ConfigurationWidgetState, definitionName: string) : WidgetConfigurationSettings {
@@ -118,13 +117,9 @@ export class WidgetState {
             true, false);
     }
 
-    public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings) : WidgetState {
-        if(typeof settings.buildCount === "string")
-        {
-            settings.buildCount = parseInt(settings.buildCount)
-        }
+    public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version?: SemanticVersion) : WidgetState {
         return new WidgetState(settings.definitionName, settings.buildDefinition, settings.buildBranch, settings.defaultTag,
-            settings.buildCount, settings.showStages, settings.matchAnyTag);
+            settings.buildCount as number, settings.showStages, settings.matchAnyTag);
     }
 
     public clone() : WidgetState {
@@ -188,11 +183,13 @@ export class BuildResultRowState {
     }
 
     public static getPreviousTimelineRecordStateForIndex(records: TimelineRecord[], index: number) : TimelineRecordState | undefined {
-        return (index > 0 &&
-            records.length > 1
-            && records[index - 1].state !== undefined) ?
-            records[index - 1].state
-            : undefined
+        if(index > 0 && records.length > 1 &&  records[index - 1].state !== undefined)
+        {
+            return records[index - 1].state;
+        }
+        else {
+            return  undefined;
+        }
     }
 }
 
