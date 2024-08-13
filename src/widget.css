@@ -134,6 +134,10 @@ a {
     margin:  1em;
 }
 
+.dropdown-element input {
+    width: 10em;
+}
+
 .widget-tag-container {
 
     width: 100%;
@@ -141,7 +145,7 @@ a {
 
 .widget-tag-dropdown {
     float: right;
-    width: 15em;
+    width: 15em !important;
 }
 
 /*
