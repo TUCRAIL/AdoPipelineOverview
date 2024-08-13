@@ -1,3 +1,5 @@
+// noinspection WebpackConfigHighlighting
+
 const path = require("path");
 //const fs = require("fs");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
@@ -26,8 +28,7 @@ module.exports = {
         "build-details": "./src/build-details.tsx",
     },
     output: {
-        filename: "[name].js",
-        publicPath: "/dist/",
+        filename: "[name].js"
     },
     resolve: {
         extensions: [".ts", ".tsx", ".js"],
@@ -61,6 +62,11 @@ module.exports = {
             {
                 test: /\.html$/,
                 loader: "file-loader"
+            },
+            {
+                test: /\.woff2?$/i,
+                type: 'asset/resource',
+                dependency: { not: ['url'] },
             }
         ]
     },
