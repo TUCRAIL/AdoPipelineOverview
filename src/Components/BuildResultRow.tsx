@@ -14,6 +14,15 @@ export class BuildResultRow extends React.Component<IBuildResultRowProps, BuildR
         this.state = BuildResultRowState.createStateFromProperties(props);
     }
 
+    static getDerivedStateFromProps(nextProps: IBuildResultRowProps, prevState: BuildResultRowState) {
+        if(prevState.showStages !== nextProps.showStages) {
+            return {
+                showStages: nextProps.showStages
+            } as BuildResultRowState;
+        }
+        return null;
+    }
+
     /**
      * Converts a build result into a task result
      * @param buildResult The build result to convert
