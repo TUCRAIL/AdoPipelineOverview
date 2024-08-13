@@ -57,12 +57,10 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         widgetSettings: WidgetSettings
     ): Promise<WidgetStatus> {
         try {
-            console.debug("Loading widget data")
             const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
 
             if(settings === null || settings === undefined || typeof settings === "undefined")
             {
-                console.warn("Widget settings are not configured. Please configure the widget");
                 this.setState(null);
             }
             else {
@@ -84,7 +82,6 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         widgetSettings: WidgetSettings
     ): Promise<WidgetStatus | undefined> {
         try {
-            console.debug("Reloading widget data")
             console.debug(JSON.stringify(widgetSettings.customSettings.data))
             const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
             if(settings === null || settings === undefined || typeof settings === "undefined")
@@ -117,8 +114,6 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         //Need to get empty object and copy because the widgetState could actually be of type ReadOnly<WidgetState>
         const settings = WidgetState.getEmptyObject();
         settings.copy(widgetState);
-
-        console.debug("Setting state from widget settings" + JSON.stringify(settings));
 
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         let buildPages: Build[] = [];
@@ -192,7 +187,6 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const tags = await buildClient.getTags(this.projectId);
 
-        console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
         this.tagItems = [];
         if (tags.length > 0) {
             tags.sort().forEach(tag => {
