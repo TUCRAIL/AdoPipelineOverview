@@ -61,7 +61,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             SDK.register('DeploymentsWidget.Configuration', this
             )
             SDK.resize(350, 500)
-            console.debug("Initializing state")
             //this.initializeState().then();
         })
     }
@@ -251,9 +250,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      */
     private async initializeState() {
         const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
-        console.debug("Entered registration")
         const project = await projectService.getProject()
-        console.debug(`project id is ${project?.id}`)
         this.projectId = project?.id!;
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const buildDefinitions = await buildClient.getDefinitions(project!.id, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
@@ -328,7 +325,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                 const customSettings: CustomSettings = {
                     data: JSON.stringify(configuration)
                 };
-                console.debug("Configuration is valid");
                 await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationChange,
                     ConfigurationEvent.Args(customSettings));
                 return  WidgetConfigurationSave.Valid(customSettings);
@@ -356,7 +352,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             selectedBranch: "all"
         });
         this.selectedBuildDefinition.value = selectedDropdown.text || "";
-        console.debug(`Selected new build definition ${this.selectedBuildDefinition.value}`);
         this.setState({
             selectedBuildDefinitionId: this.getDataAsBuildReference(selectedDropdown.data!).id,
             selectedBranch: "all"
@@ -366,7 +361,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         await this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'all');
         await this.fillTagsDropDown();
 
-        console.debug(`Selected new build definition ${this.state.selectedBuildDefinitionId}`);
     };
 
     /**
