@@ -1,5 +1,5 @@
-import {IVssRestClientOptions} from "azure-devops-extension-api/Common/Context";
-import {GitCommitRef, GitVersionOptions, GitVersionType} from "azure-devops-extension-api/Git/Git";
+import {IVssRestClientOptions} from "@tucrail/azure-devops-extension-api/Common/Context";
+import {GitCommitRef, GitVersionOptions, GitVersionType} from "@tucrail/azure-devops-extension-api/Git/Git";
 
 
 export interface GitVersionDescriptor {

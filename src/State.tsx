@@ -1,6 +1,6 @@
-import {TaskResult, TimelineRecord, TimelineRecordState} from "azure-devops-extension-api/Build";
+import {TaskResult, TimelineRecord, TimelineRecordState} from "@tucrail/azure-devops-extension-api/Build";
 import {BuildWithTimeline} from "./Models/BuildWithTimeline";
-import {SemanticVersion} from "azure-devops-extension-api/Dashboard/Dashboard";
+import {SemanticVersion} from "@tucrail/azure-devops-extension-api/Dashboard/Dashboard";
 
 export class WidgetConfigurationSettings {
     public buildDefinition: number;

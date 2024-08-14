@@ -1,6 +1,6 @@
 import React, {ReactElement} from "react";
 import {IStageResultCellProps, StageResultCellState} from "../State";
-import {TaskResult, TimelineRecordState} from "azure-devops-extension-api/Build";
+import {TaskResult, TimelineRecordState} from "@tucrail/azure-devops-extension-api/Build";
 import {StageStatus} from "./StageStatus";
 
 export class StageResultCell extends React.Component<IStageResultCellProps, StageResultCellState> {

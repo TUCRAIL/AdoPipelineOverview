@@ -2,9 +2,9 @@ import {render, screen} from "@testing-library/react";
 import React from "react";
 import {BuildResultRow} from "../../Components/BuildResultRow";
 import {BuildWithTimeline} from "../../Models/BuildWithTimeline";
-import {getClient} from "azure-devops-extension-api/Common";
-import {BuildRestClient, BuildResult} from "azure-devops-extension-api/Build";
-import {createBuild, mockGetBuild, mockGetTags} from "../../__mocks__/azure-devops-extension-api/Build";
+import {getClient} from "@tucrail/azure-devops-extension-api/Common";
+import {BuildRestClient, BuildResult} from "@tucrail/azure-devops-extension-api/Build";
+import {createBuild, mockGetBuild, mockGetTags} from "../../__mocks__/@tucrail/azure-devops-extension-api/Build";
 
 jest.mock('../../Common');
 

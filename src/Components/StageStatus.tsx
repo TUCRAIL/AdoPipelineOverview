@@ -2,7 +2,7 @@
 
 import {IStageStatusProps, IStageStatusState} from "../State";
 import {ReactElement} from "react";
-import {TaskResult, TimelineRecordState} from "azure-devops-extension-api/Build";
+import {TaskResult, TimelineRecordState} from "@tucrail/azure-devops-extension-api/Build";
 import {Status, Statuses, StatusSize} from "azure-devops-ui/Status";
 import React from "react";
 

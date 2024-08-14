@@ -1,7 +1,7 @@
 import {render, screen} from "@testing-library/react";
 import {StageStatus} from "../../Components/StageStatus";
 import React from "react";
-import {TaskResult, TimelineRecordState} from "azure-devops-extension-api/Build";
+import {TaskResult, TimelineRecordState} from "@tucrail/azure-devops-extension-api/Build";
 
 jest.mock('../../Common');
 

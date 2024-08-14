@@ -8,13 +8,13 @@ import {
 import {StageResultCell} from "../../Components/StageResultCell";
 import React from "react";
 import {StageStatus} from "../../Components/StageStatus";
-import {BuildRestClient, TaskResult, TimelineRecordState} from "azure-devops-extension-api/Build";
-import {getClient} from "azure-devops-extension-api/Common";
+import {BuildRestClient, TaskResult, TimelineRecordState} from "@tucrail/azure-devops-extension-api/Build";
+import {getClient} from "@tucrail/azure-devops-extension-api/Common";
 import {
     createRecordsForTimeline,
     createTimelineRecord,
     mockGetTimeline
-} from "../../__mocks__/azure-devops-extension-api/Build";
+} from "../../__mocks__/@tucrail/azure-devops-extension-api/Build";
 
 jest.mock('../../Common');
 

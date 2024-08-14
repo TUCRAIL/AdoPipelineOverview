@@ -13,7 +13,7 @@ import {
     WidgetConfigurationSettings,
     WidgetState
 } from "../../State";
-import {TimelineRecord, TimelineRecordState} from "azure-devops-extension-api/Build";
+import {TimelineRecord, TimelineRecordState} from "@tucrail/azure-devops-extension-api/Build";
 
 jest.mock('../../Common');
 

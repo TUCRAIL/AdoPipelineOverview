@@ -1,9 +1,5 @@
-import {IVssRestClientOptions} from "azure-devops-extension-api/Common/Context";
-import Mock = jest.Mock;
-import * as WebApi from "azure-devops-extension-api/WebApi/WebApi";
-import * as Graph from "azure-devops-extension-api/Graph/Graph";
-import * as TfsCore from "azure-devops-extension-api/Core/Core";
-import {Build} from "azure-devops-extension-api/Build";
+import {IVssRestClientOptions} from "@tucrail/azure-devops-extension-api/Common/Context";
+import {Build} from "@tucrail/azure-devops-extension-api/Build";
 
 export enum TaskResult {
     Succeeded = 0,
