@@ -1,5 +1,5 @@
-import {SemanticVersion} from "azure-devops-extension-api/Dashboard/Dashboard";
-import {EventArgs, SaveStatus, Size} from "azure-devops-extension-api/Dashboard/WidgetContracts";
+import {SemanticVersion} from "@tucrail/azure-devops-extension-api/Dashboard/Dashboard";
+import {EventArgs, SaveStatus, Size} from "@tucrail/azure-devops-extension-api/Dashboard/WidgetContracts";
 
 export enum WidgetStatusType {
     /**

@@ -1,12 +1,12 @@
 import {fireEvent, render, screen} from "@testing-library/react";
 import {Widget} from "../../widget";
 import React from "react";
-import {WidgetSettings} from "azure-devops-extension-api/Dashboard";
+import {WidgetSettings} from "@tucrail/azure-devops-extension-api/Dashboard";
 import {mockGetProject, spyWidgetCallBackAccessor} from "../../__mocks__/azure-devops-extension-sdk";
 import {
     filledWidgetConfiguration, resetMocks
 } from "../../__mocks__/Common";
-import {BuildResult, createBuild, mockGetBuilds, mockGetTags} from "../../__mocks__/azure-devops-extension-api/Build";
+import {BuildResult, createBuild, mockGetBuilds, mockGetTags} from "../../__mocks__/@tucrail/azure-devops-extension-api/Build";
 
 
 jest.mock('../../Common');

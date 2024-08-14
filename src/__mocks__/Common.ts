@@ -5,9 +5,9 @@ import {
     mockGetBuilds, mockGetDefinitions,
     mockGetTags,
     mockGetTimeline, TaskResult, TimelineRecordState
-} from "./azure-devops-extension-api/Build";
-import {mockGetProject} from "./azure-devops-extension-api/Common";
-import {WidgetSettings} from "azure-devops-extension-api/Dashboard";
+} from "./@tucrail/azure-devops-extension-api/Build";
+import {mockGetProject} from "./@tucrail/azure-devops-extension-api/Common";
+import {WidgetSettings} from "@tucrail/azure-devops-extension-api/Dashboard";
 
 export function showRootComponent(component: React.ReactElement<any>) {}
 

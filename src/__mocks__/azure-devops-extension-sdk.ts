@@ -1,7 +1,7 @@
 import {IHostContext, IUserContext} from "azure-devops-extension-sdk";
-import {EventArgs, Size} from "azure-devops-extension-api/Dashboard/WidgetContracts";
-import {WidgetSettings, WidgetStatus} from "./azure-devops-extension-api/Dashboard";
-import {CommonServiceIds} from "azure-devops-extension-api/Common";
+import {EventArgs, Size} from "@tucrail/azure-devops-extension-api/Dashboard/WidgetContracts";
+import {WidgetSettings, WidgetStatus} from "./@tucrail/azure-devops-extension-api/Dashboard";
+import {CommonServiceIds} from "@tucrail/azure-devops-extension-api/Common";
 
 
 /**

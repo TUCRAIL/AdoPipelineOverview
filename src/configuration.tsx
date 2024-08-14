@@ -7,22 +7,22 @@ import {
     IWidgetConfiguration,
     IWidgetConfigurationContext,
     WidgetSettings, WidgetStatusHelper, WidgetStatus
-} from "azure-devops-extension-api/Dashboard";
+} from "@tucrail/azure-devops-extension-api/Dashboard";
 
 import React = require("react")
 import {
     ConfigurationEvent,
     CustomSettings, SaveStatus
-} from "azure-devops-extension-api/Dashboard";
+} from "@tucrail/azure-devops-extension-api/Dashboard";
 import "azure-devops-ui/Core/override.css";
 import "./configuration.scss"
 import {IListBoxItem} from "azure-devops-ui/ListBox";
 import {
     BuildDefinition3_2,
     BuildRestClient
-} from "azure-devops-extension-api/Build";
-import {GitRestClient} from "azure-devops-extension-api/Git";
-import {CommonServiceIds, IProjectPageService, getClient} from "azure-devops-extension-api/Common";
+} from "@tucrail/azure-devops-extension-api/Build";
+import {GitRestClient} from "@tucrail/azure-devops-extension-api/Git";
+import {CommonServiceIds, IProjectPageService, getClient} from "@tucrail/azure-devops-extension-api/Common";
 import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";

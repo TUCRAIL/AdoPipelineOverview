@@ -1,6 +1,6 @@
 import React, {ReactElement} from "react";
 import {BuildResultRowState, IBuildResultRowProps} from "../State";
-import {BuildResult, TaskResult} from "azure-devops-extension-api/Build";
+import {BuildResult, TaskResult} from "@tucrail/azure-devops-extension-api/Build";
 import {StageStatus} from "./StageStatus";
 import {StageResultCell} from "./StageResultCell";
 import {testDataIds} from "../Common";

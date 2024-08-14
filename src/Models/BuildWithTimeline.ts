@@ -1,4 +1,4 @@
-import {Build, Timeline} from "azure-devops-extension-api/Build";
+import {Build, Timeline} from "@tucrail/azure-devops-extension-api/Build";
 
 export class BuildWithTimeline {
     public build: Build
