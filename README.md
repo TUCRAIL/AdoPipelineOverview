@@ -1,5 +1,11 @@
 # Azure DevOps pipeline overview
 
+## For Azure DevOps Server users
+
+Currently, this widget is only compatible with Azure DevOps server 2022.2 due to api-version changes in the azure devops extension library.
+
+This issue will be fixed in all versions above or equal to 2.1.0.0 . However, until then, old and new installations of the widget are expected to not work on versions of Azure DevOps server at 2022.1 patch x and lower.
+
 ## How it works
 
 This widget allows you to display the various builds executed on a specific pipeline for one branch.
