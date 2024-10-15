@@ -6,7 +6,7 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 
 module.exports = {
-    devtool: "inline-source-map",
+    devtool: false,
     devServer: {
         port: 3000,
         static: [
