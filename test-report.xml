@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-  <testsuite id="0" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/State/State.test.ts" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/State/State.test.ts" hostname="localhost" tests="19" failures="0" time="4.346" timestamp="2026-03-13T10:33:24">
+  <testsuite id="0" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/State/State.test.ts" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/State/State.test.ts" hostname="localhost" tests="19" failures="0" time="2.786" timestamp="2026-03-13T10:35:37">
     <properties>
     </properties>
     <testcase classname="WidgetState" name="State - WidgetState - Test configuration V1 to widget state" time="0">
@@ -44,7 +44,7 @@
     <system-out/>
     <system-err/>
   </testsuite>
-  <testsuite id="1" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/StageResultCell/StageResultCell.test.tsx" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/StageResultCell/StageResultCell.test.tsx" hostname="localhost" tests="12" failures="0" time="2.201" timestamp="2026-03-13T10:33:29">
+  <testsuite id="1" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/StageResultCell/StageResultCell.test.tsx" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/StageResultCell/StageResultCell.test.tsx" hostname="localhost" tests="12" failures="0" time="0.836" timestamp="2026-03-13T10:35:40">
     <properties>
     </properties>
     <testcase classname="StageResultCell" name="StageResultCell - Render" time="0">
@@ -74,7 +74,7 @@
     <system-out/>
     <system-err/>
   </testsuite>
-  <testsuite id="2" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/BuildResultRow/BuildResultRow.test.tsx" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/BuildResultRow/BuildResultRow.test.tsx" hostname="localhost" tests="8" failures="0" time="0.546" timestamp="2026-03-13T10:33:31">
+  <testsuite id="2" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/BuildResultRow/BuildResultRow.test.tsx" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/BuildResultRow/BuildResultRow.test.tsx" hostname="localhost" tests="8" failures="0" time="0.163" timestamp="2026-03-13T10:35:41">
     <properties>
     </properties>
     <testcase classname="BuildResultRow" name="BuildResultRow - Render - No stages" time="0">
@@ -96,7 +96,7 @@
     <system-out/>
     <system-err/>
   </testsuite>
-  <testsuite id="3" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/StageStatus/StageStatus.test.tsx" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/StageStatus/StageStatus.test.tsx" hostname="localhost" tests="12" failures="0" time="0.337" timestamp="2026-03-13T10:33:32">
+  <testsuite id="3" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/StageStatus/StageStatus.test.tsx" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/StageStatus/StageStatus.test.tsx" hostname="localhost" tests="12" failures="0" time="0.213" timestamp="2026-03-13T10:35:41">
     <properties>
     </properties>
     <testcase classname="StageStatus" name="StageStatus - Render" time="0">
@@ -126,7 +126,7 @@
     <system-out/>
     <system-err/>
   </testsuite>
-  <testsuite id="4" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Widget/Widget.test.tsx" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Widget/Widget.test.tsx" hostname="localhost" tests="7" failures="0" time="9.333" timestamp="2026-03-13T10:33:24">
+  <testsuite id="4" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Widget/Widget.test.tsx" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Widget/Widget.test.tsx" hostname="localhost" tests="7" failures="0" time="6.536" timestamp="2026-03-13T10:35:37">
     <properties>
     </properties>
     <testcase classname="Widget" name="Widget - Render with no configuration" time="0">
@@ -146,7 +146,7 @@
     <system-out/>
     <system-err/>
   </testsuite>
-  <testsuite id="5" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Configuration/Configuration.test.tsx" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Configuration/Configuration.test.tsx" hostname="localhost" tests="16" failures="0" time="9.971" timestamp="2026-03-13T10:33:24">
+  <testsuite id="5" name="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Configuration/Configuration.test.tsx" errors="0" package="/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Configuration/Configuration.test.tsx" hostname="localhost" tests="16" failures="1" time="7.344" timestamp="2026-03-13T10:35:37">
     <properties>
     </properties>
     <testcase classname="Configuration" name="ConfigurationWidget - Render with no configuration settings" time="0">
@@ -158,6 +158,15 @@
     <testcase classname="Configuration" name="Configuration - Render with configuration and definition or branches not empty" time="0">
     </testcase>
     <testcase classname="Configuration" name="Configuration - Render with matching branch" time="0">
+      <failure message="Error: expect(received).toEqual(expected) // deep equality
+
+Expected: &quot;master&quot;
+Received: &quot;refs/heads/master&quot;
+    at /home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Configuration/Configuration.test.tsx:193:45
+    at step (/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Configuration/Configuration.test.tsx:33:23)
+    at Object.next (/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Configuration/Configuration.test.tsx:14:53)
+    at fulfilled (/home/runner/work/AdoPipelineOverview/AdoPipelineOverview/src/Tests/Configuration/Configuration.test.tsx:5:58)" type="AssertionError">
+      </failure>
     </testcase>
     <testcase classname="Configuration" name="Configuration - Render with matching branch starting with refs/heads/ in the configuration" time="0">
     </testcase>
