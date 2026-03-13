@@ -27,7 +27,7 @@ export const filledWidgetConfigurationAsConfigurationState : ConfigurationWidget
 
 export function widgetConfigurationEqualsConfigurationWidgetState(configuration: WidgetConfigurationSettings, state: ConfigurationWidgetState, definitionName: string = "definitionName" ) {
     expect(state.selectedBuildDefinitionId).toBe(configuration.buildDefinition);
-    expect(state.selectedBranch).toBe(configuration.buildBranch);
+    expect(state.selectedBranches).toBe(configuration.buildBranch);
     expect(state.selectedTag).toBe(configuration.defaultTag);
     expect(state.buildCount).toBe(configuration.buildCount);
     expect(state.showStages).toBe(configuration.showStages);
@@ -37,7 +37,7 @@ export function widgetConfigurationEqualsConfigurationWidgetState(configuration:
 
 export function widgetConfigurationEqualsWidgetState(configuration: WidgetConfigurationSettings, state: WidgetState) {
     expect(state.selectedBuildDefinitionId).toBe(configuration.buildDefinition);
-    expect(state.selectedBranch).toBe(configuration.buildBranch);
+    expect(state.selectedBranches).toBe(configuration.buildBranch);
     expect(state.selectedTag).toBe(configuration.defaultTag);
     expect(state.buildCount).toBe(configuration.buildCount);
     expect(state.showStages).toBe(configuration.showStages);

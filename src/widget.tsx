@@ -129,9 +129,9 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
 
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         let buildPages: Build[] = [];
-        const branches = settings.selectedBranch === 'all'
+        const branches = settings.selectedBranches === 'all'
             ? [undefined as (string | undefined)]
-            : settings.selectedBranch.split(',');
+            : settings.selectedBranches.split(',').map(b => b.trim());
         if(settings.matchAnyTagSelected)
         {
             for(const branch of branches) {
@@ -321,9 +321,11 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
 
                 <h2 className="title">
                     <div className="inner-title">{this.state.selectedDefinitionName ?? 'No definition found'}</div>
-                    <div className="subtitle">{(this.state.selectedBranch === "all"
-                        ? "all"
-                        : this.state.selectedBranch.split(",").map(b => b.replace("refs/heads/", "")).join(", ")) ?? 'No branch found'}</div>
+                    <div className="subtitle">
+                        {this.state.selectedBranches === "all"
+                            ? "all"
+                            : this.state.selectedBranches.split(",").map(b => b.replace("refs/heads/", "")).join(", ")}
+                    </div>
                 </h2>
 
                 <div className="content">

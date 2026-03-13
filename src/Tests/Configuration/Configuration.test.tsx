@@ -190,7 +190,7 @@ describe("Configuration", () => {
 
         await delay(1);
 
-        expect(widget.state.selectedBranch).toEqual("master");
+        expect(widget.state.selectedBranches).toEqual("refs/heads/master");
     });
 
     test('Configuration - Render with matching branch starting with refs/heads/ in the configuration', async() => {
@@ -233,7 +233,7 @@ describe("Configuration", () => {
 
         await delay(1);
 
-        expect(widget.state.selectedBranch.replace("refs/heads/", '')).toEqual("master");
+        expect(widget.state.selectedBranches.replace("refs/heads/", '')).toEqual("master");
 
     });
 
@@ -280,7 +280,7 @@ describe("Configuration", () => {
 
         await delay(1);
 
-        expect(widget.state.selectedBranch.replace("refs/heads/", '')).toEqual("master");
+        expect(widget.state.selectedBranches.replace("refs/heads/", '')).toEqual("master");
 
     });
 
@@ -546,6 +546,199 @@ describe("Configuration", () => {
             expect(["uat,prd", "prd,uat"]).toContain(widget.state.selectedTag);
         });
 
+    });
+
+    test('Configuration - Test multi-branch selection with two branches', async() => {
+        render(
+            <ConfigurationWidget></ConfigurationWidget>
+        )
+
+        await delay(1);
+        const args: WidgetSettings = {
+            name: "settings",
+            size: {
+                rowSpan: 3,
+                columnSpan: 3
+            },
+            lightboxOptions: undefined,
+            customSettings: {
+                version: undefined,
+                data: JSON.stringify(filledWidgetConfiguration)
+            }
+        }
+        const widgetContext = new IWidgetConfigurationContext();
+
+        mockGetDefinitions.mockReturnValue([
+            createDefinition(1, "definitionName")
+        ]);
+
+        mockGetBranches.mockReturnValue([
+            createBranchStat("master"),
+            createBranchStat("develop")
+        ]);
+
+        mockGetTags.mockReturnValue([]);
+
+        // @ts-ignore
+        const widget = spyWidgetCallBackAccessor as ConfigurationWidget;
+
+        await widget.load(args, widgetContext);
+
+        await delay(1);
+
+        const branchDropdownContainer = screen.getByRole("branch-dropdown");
+        const branchDropdown = branchDropdownContainer.getElementsByTagName("input")[0];
+
+        click(branchDropdown);
+
+        const masterBranch = await screen.findByText("master");
+        click(masterBranch);
+
+        const developBranch = await screen.findByText("develop");
+        click(developBranch);
+
+        await waitFor(() => {
+            expect(["refs/heads/master,refs/heads/develop", "refs/heads/develop,refs/heads/master"])
+                .toContain(widget.state.selectedBranches);
+        });
+    });
+
+    test('Configuration - Test backward compat: old single branch (without refs/heads/) is normalized', async() => {
+        render(
+            <ConfigurationWidget></ConfigurationWidget>
+        )
+
+        let configuration = filledWidgetConfiguration.clone();
+        configuration.buildBranch = "master";
+
+        await delay(1);
+        const args: WidgetSettings = {
+            name: "settings",
+            size: {
+                rowSpan: 3,
+                columnSpan: 3
+            },
+            lightboxOptions: undefined,
+            customSettings: {
+                version: undefined,
+                data: JSON.stringify(configuration)
+            }
+        }
+        const widgetContext = new IWidgetConfigurationContext();
+
+        mockGetDefinitions.mockReturnValue([
+            createDefinition(1, "definitionName")
+        ]);
+
+        mockGetBranches.mockReturnValue([
+            createBranchStat("master")
+        ]);
+
+        mockGetTags.mockReturnValue([]);
+
+        // @ts-ignore
+        const widget = spyWidgetCallBackAccessor as ConfigurationWidget;
+
+        await widget.load(args, widgetContext);
+
+        await delay(1);
+
+        // Legacy "master" is auto-migrated to "refs/heads/master" in the multi-select state
+        expect(widget.state.selectedBranches).toEqual("refs/heads/master");
+    });
+
+    test('Configuration - Validate that no branches selected results in invalid configuration', async() => {
+        render(
+            <ConfigurationWidget></ConfigurationWidget>
+        )
+
+        await delay(1);
+        const args: WidgetSettings = {
+            name: "settings",
+            size: {
+                rowSpan: 3,
+                columnSpan: 3
+            },
+            lightboxOptions: undefined,
+            customSettings: {
+                version: undefined,
+                data: JSON.stringify(filledWidgetConfiguration)
+            }
+        }
+        const widgetContext = new IWidgetConfigurationContext();
+
+        mockGetDefinitions.mockReturnValue([
+            createDefinition(1, "definitionName")
+        ]);
+
+        mockGetBranches.mockReturnValue([
+            createBranchStat("master")
+        ]);
+
+        mockGetTags.mockReturnValue([]);
+
+        // @ts-ignore
+        const widget = spyWidgetCallBackAccessor as ConfigurationWidget;
+
+        await widget.load(args, widgetContext);
+
+        await delay(1);
+
+        // Simulate clearing all branch selections (state = "all" = no branches explicitly selected)
+        widget.setState({ selectedBranches: "all" });
+
+        await delay(200);
+
+        const result = await widget.onSave();
+
+        // @ts-ignore
+        expect(result.isValid).toEqual(false);
+    });
+
+    test('Configuration - Validate that at least one branch selected results in valid configuration', async() => {
+        render(
+            <ConfigurationWidget></ConfigurationWidget>
+        )
+
+        let configuration = filledWidgetConfiguration.clone();
+        configuration.buildBranch = "refs/heads/master";
+
+        await delay(1);
+        const args: WidgetSettings = {
+            name: "settings",
+            size: {
+                rowSpan: 3,
+                columnSpan: 3
+            },
+            lightboxOptions: undefined,
+            customSettings: {
+                version: undefined,
+                data: JSON.stringify(configuration)
+            }
+        }
+        const widgetContext = new IWidgetConfigurationContext();
+
+        mockGetDefinitions.mockReturnValue([
+            createDefinition(1, "definitionName")
+        ]);
+
+        mockGetBranches.mockReturnValue([
+            createBranchStat("master")
+        ]);
+
+        mockGetTags.mockReturnValue([]);
+
+        // @ts-ignore
+        const widget = spyWidgetCallBackAccessor as ConfigurationWidget;
+
+        await widget.load(args, widgetContext);
+
+        await delay(1);
+
+        const result = await widget.onSave();
+
+        // @ts-ignore
+        expect(result.isValid).toEqual(true);
     });
 
     // it.each([])("Configuration - Test placeholder text for %s with expected result text '%s'",
