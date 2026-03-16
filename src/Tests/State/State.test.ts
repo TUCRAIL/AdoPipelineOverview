@@ -131,6 +131,29 @@ describe("State", () => {
 
             expect(emptyState).toEqual(expectedState);
         });
+
+        test("State - WidgetConfigurationSettings - Backward compat: single branch is preserved as-is", () => {
+            const settings = new WidgetConfigurationSettings(1, "refs/heads/master", "def", 5, "all", true, false);
+            const configState = ConfigurationWidgetState.fromWidgetConfigurationSettings(settings);
+
+            // Single branch stored as-is; the UI (fillBranchesDropDown) handles normalization
+            expect(configState.selectedBranches).toEqual("refs/heads/master");
+        });
+
+        test("State - WidgetConfigurationSettings - Backward compat: multi-branch comma string is preserved", () => {
+            const settings = new WidgetConfigurationSettings(1, "refs/heads/master,refs/heads/develop", "def", 5, "all", true, false);
+            const configState = ConfigurationWidgetState.fromWidgetConfigurationSettings(settings);
+
+            expect(configState.selectedBranches).toEqual("refs/heads/master,refs/heads/develop");
+        });
+
+        test("State - WidgetConfigurationSettings - Backward compat: legacy single branch without prefix is preserved for migration", () => {
+            const settings = new WidgetConfigurationSettings(1, "master", "def", 5, "all", true, false);
+            const configState = ConfigurationWidgetState.fromWidgetConfigurationSettings(settings);
+
+            // The raw value is passed through; fillBranchesDropDown normalizes it at load time
+            expect(configState.selectedBranches).toEqual("master");
+        });
     });
 
     describe("BuildResultRowState", () => {

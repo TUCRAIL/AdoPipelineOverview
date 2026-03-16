@@ -7,6 +7,7 @@ import {
     filledWidgetConfiguration, resetMocks
 } from "../../__mocks__/Common";
 import {BuildResult, createBuild, mockGetBuilds, mockGetTags} from "../../__mocks__/@tucrail/azure-devops-extension-api/Build";
+import {WidgetConfigurationSettings} from "../../State";
 
 
 jest.mock('../../Common');
@@ -251,6 +252,45 @@ describe("Widget", () => {
         await widget.reload(args);
 
         await delay(1);
+    });
+
+    it.each([
+        ["refs/heads/master,refs/heads/develop", 2],
+        ["refs/heads/master", 1]
+    ])('Widget - Render with multi-branch configuration: %s makes %d getBuilds call(s)', async(buildBranch, expectedCallCount) => {
+        render(
+            <Widget></Widget>
+        )
+
+        await delay(1);
+        // Use a fresh configuration to avoid state pollution from earlier tests
+        const configuration = new WidgetConfigurationSettings(1, buildBranch, "definitionName", 5, "all", false, false);
+        const args: WidgetSettings = {
+            name: "settings",
+            size: {
+                rowSpan: 3,
+                columnSpan: 3
+            },
+            lightboxOptions: undefined,
+            customSettings: {
+                version: undefined,
+                data: JSON.stringify(configuration)
+            }
+        }
+
+        // Ensure mockGetProject returns a valid project so that preload sets the correct projectId
+        mockGetProject.mockReturnValue({ id: "buildClient", name: "buildClient" });
+        mockGetBuilds.mockReturnValue([]);
+        const callsBefore = mockGetBuilds.mock.calls.length;
+
+        // @ts-ignore
+        const widget = spyWidgetCallBackAccessor as Widget;
+
+        await widget.preload(args);
+        await widget.load(args);
+
+        // One getBuilds call is expected per branch in the configuration
+        expect(mockGetBuilds.mock.calls.length - callsBefore).toEqual(expectedCallCount);
     });
 })
 

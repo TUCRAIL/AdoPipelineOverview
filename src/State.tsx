@@ -44,14 +44,14 @@ export class ConfigurationWidgetState {
     showStages: boolean;
     selectedTag: string;
     selectedBuildDefinitionId: number;
-    selectedBranch: string;
+    selectedBranches: string;
     matchAnyTagSelected: boolean;
 
     public static version = '2.0.0'
 
-    constructor(selectedBuilDefinitionId: number, selectedBranch: string, selectedTag: string, buildCount: number, showStages: boolean, isBranchDropdownDisabled?: boolean, matchAnyTagSelected?: boolean) {
+    constructor(selectedBuilDefinitionId: number, selectedBranches: string, selectedTag: string, buildCount: number, showStages: boolean, isBranchDropdownDisabled?: boolean, matchAnyTagSelected?: boolean) {
         this.selectedBuildDefinitionId = selectedBuilDefinitionId;
-        this.selectedBranch = selectedBranch;
+        this.selectedBranches = selectedBranches;
         this.selectedTag = selectedTag;
         this.buildCount = buildCount;
         this.showStages = showStages;
@@ -81,14 +81,14 @@ export class ConfigurationWidgetState {
     }
 
     public static toWidgetConfigurationSettings(state: ConfigurationWidgetState, definitionName: string) : WidgetConfigurationSettings {
-        return new WidgetConfigurationSettings(state.selectedBuildDefinitionId as number, state.selectedBranch, definitionName, state.buildCount,
+        return new WidgetConfigurationSettings(state.selectedBuildDefinitionId as number, state.selectedBranches, definitionName, state.buildCount,
             state.selectedTag, state.showStages, state.matchAnyTagSelected);
     }
 
     public clone() : ConfigurationWidgetState {
         //Do a conversion to ultimately make sure that no user still has a string for the build count
 
-        return new ConfigurationWidgetState(this.selectedBuildDefinitionId as number, this.selectedBranch, this.selectedTag,
+        return new ConfigurationWidgetState(this.selectedBuildDefinitionId as number, this.selectedBranches, this.selectedTag,
             this.buildCount, this.showStages, this.isBranchDropdownDisabled, this.matchAnyTagSelected);
     }
 
@@ -97,7 +97,7 @@ export class ConfigurationWidgetState {
     public copy(original : ConfigurationWidgetState)
     {
         this.selectedBuildDefinitionId = original.selectedBuildDefinitionId as number;
-        this.selectedBranch = original.selectedBranch;
+        this.selectedBranches = original.selectedBranches;
         this.selectedTag = original.selectedTag;
         this.buildCount = original.buildCount;
         this.showStages = original.showStages;
@@ -112,16 +112,16 @@ export class ConfigurationWidgetState {
 export class WidgetState {
     selectedDefinitionName: string;
     selectedBuildDefinitionId: number;
-    selectedBranch: string;
+    selectedBranches: string;
     selectedTag: string | undefined;
     buildCount: number;
     showStages: boolean;
     matchAnyTagSelected: boolean;
 
-    constructor(selectedDefinitionName: string, selectedBuildDefinitionId: number, selectedBranch: string, selectedTag: string, buildCount: number, showStages: boolean, matchAnyTagSelected?: boolean) {
+    constructor(selectedDefinitionName: string, selectedBuildDefinitionId: number, selectedBranches: string, selectedTag: string, buildCount: number, showStages: boolean, matchAnyTagSelected?: boolean) {
         this.selectedDefinitionName = selectedDefinitionName;
         this.selectedBuildDefinitionId = selectedBuildDefinitionId as number;
-        this.selectedBranch = selectedBranch;
+        this.selectedBranches = selectedBranches;
         this.selectedTag = selectedTag;
         this.buildCount = buildCount;
         this.showStages = showStages;
@@ -150,7 +150,7 @@ export class WidgetState {
     }
 
     public clone() : WidgetState {
-        return new WidgetState(this.selectedDefinitionName, this.selectedBuildDefinitionId, this.selectedBranch, this.selectedTag ?? "all",
+        return new WidgetState(this.selectedDefinitionName, this.selectedBuildDefinitionId, this.selectedBranches, this.selectedTag ?? "all",
             this.buildCount, this.showStages, this.matchAnyTagSelected);
     }
 
@@ -158,7 +158,7 @@ export class WidgetState {
     {
         this.selectedDefinitionName = original.selectedDefinitionName;
         this.selectedBuildDefinitionId = original.selectedBuildDefinitionId;
-        this.selectedBranch = original.selectedBranch;
+        this.selectedBranches = original.selectedBranches;
         this.selectedTag = original.selectedTag;
         this.buildCount = original.buildCount;
         this.showStages = original.showStages;

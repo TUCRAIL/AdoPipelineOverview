@@ -37,6 +37,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     private buildDefinitionItems : IListBoxItem[] = [];
     private selectedBuildDefinition = new ObservableValue<string>("");
     private tagDropdownMultiSelection = new DropdownMultiSelection();
+    private branchDropdownMultiSelection = new DropdownMultiSelection();
 
     private widgetConfigurationContext?: IWidgetConfigurationContext;
 
@@ -147,6 +148,8 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      */
     private async fillBranchesDropDown(definitionRepositoryId: string, buildBranch: string) {
         this.branchItems = [];
+        this.branchDropdownMultiSelection.clear();
+        this.branchDropdownMultiSelection.clearUnselectable();
         const codeClient = getClient<GitRestClient>(GitRestClient);
 
         const repositoryBranches = await codeClient.getBranches(definitionRepositoryId,
@@ -158,35 +161,41 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
 
         console.debug(`Starting to populate the branch dropdown. ${branchesArray.length} branches to add`);
 
-        this.branchItems.push({
-            id: "all",
-            text: "all"
-        });
-
-        let foundMatchingBranch = false;
-        const RefBuildBranch = buildBranch.startsWith("refs/heads/") ? buildBranch : `refs/heads/${buildBranch}`;
-
         branchesArray.forEach(branch => {
             const newItem : IListBoxItem = {
                 id: branch,
                 text: branch.replace("refs/heads/", "")
             }
-            this.branchItems.push(newItem)
-            console.debug("comparing" + branch + "with " + RefBuildBranch)
-            if(branch === RefBuildBranch)
-            {
-                foundMatchingBranch = true;
-                console.debug("Found matching branch")
-            }
+            this.branchItems.push(newItem);
             console.debug("Adding branch " + branch);
         });
 
-        if(!foundMatchingBranch)
-        {
-            this.setState({
-                    selectedBranch: "all"
+        if (buildBranch === "all") {
+            // Restore "Select All" state: disable all items so individual toggles are ignored
+            this.branchDropdownMultiSelection.addUnselectable(0, this.branchItems.length);
+            this.setState({ selectedBranches: "all" });
+        } else if (buildBranch !== "none" && buildBranch !== "") {
+            // Restore specific branch selections (supports comma-separated multi-branch or legacy single branch)
+            const savedBranches = buildBranch.split(",").map(b =>
+                b.trim().startsWith("refs/heads/") ? b.trim() : `refs/heads/${b.trim()}`);
+            let foundAny = false;
+            for (const savedBranch of savedBranches) {
+                const index = this.branchItems.findIndex((item) => item.id === savedBranch);
+                if (index !== -1) {
+                    foundAny = true;
+                    this.branchDropdownMultiSelection.select(index, undefined, true, true);
                 }
-            );
+            }
+            if (foundAny) {
+                this.setState({
+                    selectedBranches: savedBranches.filter(b =>
+                        this.branchItems.some(item => item.id === b)).join(",")
+                });
+            } else {
+                this.setState({ selectedBranches: "none" });
+            }
+        } else {
+            this.setState({ selectedBranches: "none" });
         }
 
         this.setState({
@@ -273,7 +282,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                     isBranchDropdownDisabled: false
                 });
                 await this.fillBranchesDropDown(this.getDataAsBuildReference(definition).repository.id.toString(),
-                    this.state.selectedBranch);
+                    this.state.selectedBranches);
                 await this.fillTagsDropDown();
             }
         }));
@@ -286,17 +295,11 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     private async validateConfiguration() : Promise<SaveStatus>
     {
         try {
-            let branchName = this.state.selectedBranch;
-            if(branchName === "all")
-            {
-
-            }
-            else if(branchName.startsWith("refs/heads/"))
-            {
-
-            }
-            else {
-                branchName = `refs/heads/${branchName}`;
+            let branchName = this.state.selectedBranches;
+            if(branchName !== "all" && branchName !== "none" && branchName !== "") {
+                branchName = branchName.split(",")
+                    .map(b => b.trim().startsWith("refs/heads/") ? b.trim() : `refs/heads/${b.trim()}`)
+                    .join(",");
             }
             let configuration = ConfigurationWidgetState
                 .toWidgetConfigurationSettings(this.state, this.selectedBuildDefinition.value)
@@ -306,9 +309,9 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             {
                 errorMessage += "The build definition selected is invalid \n";
             }
-            if(configuration.buildBranch === "")
+            if(configuration.buildBranch === "" || configuration.buildBranch === "none")
             {
-                errorMessage += "The branch selected is invalid \n";
+                errorMessage += "At least one branch must be selected \n";
             }
             if(typeof configuration.buildCount === "string")
             {
@@ -350,20 +353,23 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      * @param selectedDropdown
      */
     private onBuildDropdownChange = async (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+        this.branchDropdownMultiSelection.clear();
+        this.branchDropdownMultiSelection.clearUnselectable();
+        this.tagDropdownMultiSelection.clear();
         this.setState({
             isBranchDropdownDisabled: true,
             selectedTag: 'all',
-            selectedBranch: "all"
+            selectedBranches: "none"
         });
         this.selectedBuildDefinition.value = selectedDropdown.text || "";
         console.debug(`Selected new build definition ${this.selectedBuildDefinition.value}`);
         this.setState({
             selectedBuildDefinitionId: this.getDataAsBuildReference(selectedDropdown.data!).id,
-            selectedBranch: "all"
+            selectedBranches: "none"
         });
         this.buildDefinitionItems!.find(d =>
             Number(this.getDataAsBuildReference(d).id) === Number(this.getDataAsBuildReference(selectedDropdown.data!).id));
-        await this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'all');
+        await this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'none');
         await this.fillTagsDropDown();
 
         console.debug(`Selected new build definition ${this.state.selectedBuildDefinitionId}`);
@@ -405,14 +411,39 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     /**
      * Event handler for when the branch dropdown is changed
      * @param _event
-     * @param selectedDropdown
+     * @param _selectedDropdown
      */
-    private onBranchDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+    private onBranchDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
+        let newBranchState = "";
+        for(let i = 0; i < this.branchDropdownMultiSelection.value.length; i++) {
+            const selectionRange = this.branchDropdownMultiSelection.value[i];
+            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++) {
+                newBranchState += this.branchItems[j].id + ",";
+            }
+        }
+        if(newBranchState.endsWith(',')) {
+            newBranchState = newBranchState.substring(0, newBranchState.length - 1);
+        }
         this.setState({
-            selectedBranch: selectedDropdown.text === undefined ? "" : selectedDropdown.text
+            selectedBranches: newBranchState === "" ? "none" : newBranchState
         });
     };
 
+    private onClearBranchDropdownSelectionClicked() {
+        this.branchDropdownMultiSelection.clear();
+        this.branchDropdownMultiSelection.clearUnselectable();
+        this.setState({ selectedBranches: "none" });
+    }
+
+    private onSelectAllBranchesClicked() {
+        if (this.branchItems.length === 0) {
+            return;
+        }
+        this.branchDropdownMultiSelection.clear();
+        this.branchDropdownMultiSelection.clearUnselectable();
+        this.branchDropdownMultiSelection.addUnselectable(0, this.branchItems.length);
+        this.setState({ selectedBranches: "all" });
+    }
 
 
     /**
@@ -471,7 +502,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                 <div id={"build_definition"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <label>Build Definition: </label>
                     <Dropdown items={this.buildDefinitionItems}
-                              width={320}
                               noItemsText={"No build definition was found"}
                               className={"dropdown-element"}
                               placeholder={this.state.selectedBuildDefinitionId === -1 ? "Select a build definition" : this.selectedBuildDefinition.value}
@@ -483,13 +513,40 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
 
                 <div id={"branch"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <label>Branch: </label>
-                    <Dropdown items={this.branchItems}
+                    <Dropdown role={"branch-dropdown"}
+                              items={this.branchItems}
                               noItemsText={"No branch was found"}
-                              width={320}
-                              className={"dropdown-element"}
-                              placeholder={this.state.selectedBranch === "" ? "Select a branch" : this.state.selectedBranch.replace("refs/heads/", "")}
+                              containerClassName={"full-width"}
+                              className={"dropdown-element full-width"}
+                              showFilterBox={true}
+                              filterPlaceholderText={"Search branches..."}
+                              actions={[
+                                  {
+                                      className: "bolt-dropdown-action-right-button",
+                                      disabled: this.branchItems.length === 0,
+                                      iconProps: { iconName: "CheckList" },
+                                      text: "Select all",
+                                      onClick: () => {
+                                          this.onSelectAllBranchesClicked();
+                                      }
+                                  },
+                                  {
+                                      className: "bolt-dropdown-action-right-button",
+                                      disabled: this.branchDropdownMultiSelection.selectedCount === 0 && !(this.state.selectedBranches === "all"),
+                                      iconProps: { iconName: "Clear" },
+                                      text: "Clear",
+                                      onClick: () => {
+                                          this.onClearBranchDropdownSelectionClicked();
+                                      }
+                                  }
+                              ]}
+                              placeholder={this.state.selectedBranches === "" ? "Select a branch" :
+                                  this.state.selectedBranches === "none" ? "No branches selected" :
+                                  this.state.selectedBranches === "all" ? "All branches" :
+                                  this.state.selectedBranches.split(",").map(b => b.replace("refs/heads/", "")).join(", ")}
                               onSelect={this.onBranchDropdownChange}
-                              disabled={this.state.isBranchDropdownDisabled}/>
+                              disabled={this.state.isBranchDropdownDisabled}
+                              selection={this.branchDropdownMultiSelection}/>
 
                 </div>
                 <div id={"build_count"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
@@ -501,7 +558,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                         className={"dropdown-element"}
                         label={"Builds to show"}/>
 
-                "</div>"
+                </div>
                 <div id={"tags"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <label>Tags: </label>
                     <Dropdown role={"tag-dropdown"}

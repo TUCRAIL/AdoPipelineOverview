@@ -129,24 +129,33 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
 
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         let buildPages: Build[] = [];
+        const branches = settings.selectedBranches === 'all'
+            ? [undefined as (string | undefined)]
+            : settings.selectedBranches === 'none' || settings.selectedBranches === ''
+                ? []
+                : settings.selectedBranches.split(',').map(b => b.trim());
         if(settings.matchAnyTagSelected)
         {
-            for(let tag of settings.selectedTag?.split(',') ?? []) {
-                let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
-                    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                    settings.selectedTag === 'all' ? undefined : [tag], undefined, settings.buildCount, undefined,
-                    undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.selectedBranch === 'all' ? undefined : settings.selectedBranch,
-                    undefined, undefined, undefined);
-                buildPages = buildPages.concat(buildPage);
+            for(const branch of branches) {
+                for(let tag of settings.selectedTag?.split(',') ?? []) {
+                    let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
+                        undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+                        settings.selectedTag === 'all' ? undefined : [tag], undefined, settings.buildCount, undefined,
+                        undefined, undefined, BuildQueryOrder.StartTimeDescending, branch,
+                        undefined, undefined, undefined);
+                    buildPages = buildPages.concat(buildPage);
+                }
             }
         }
         else {
-            let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
-                undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                settings.selectedTag === 'all' ? undefined : settings.selectedTag?.split(',') ?? [], undefined, settings.buildCount, undefined,
-                undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.selectedBranch === 'all' ? undefined : settings.selectedBranch,
-                undefined, undefined, undefined);
-            buildPages = buildPages.concat(buildPage);
+            for(const branch of branches) {
+                let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
+                    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+                    settings.selectedTag === 'all' ? undefined : settings.selectedTag?.split(',') ?? [], undefined, settings.buildCount, undefined,
+                    undefined, undefined, BuildQueryOrder.StartTimeDescending, branch,
+                    undefined, undefined, undefined);
+                buildPages = buildPages.concat(buildPage);
+            }
         }
         buildPages = buildPages.filter((value, index, self) => self.indexOf(value) === index);
 
@@ -314,7 +323,13 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
 
                 <h2 className="title">
                     <div className="inner-title">{this.state.selectedDefinitionName ?? 'No definition found'}</div>
-                    <div className="subtitle">{this.state.selectedBranch.replace("refs/heads/", "") ?? 'No branch found'}</div>
+                    <div className="subtitle">
+                        {this.state.selectedBranches === "all"
+                            ? "All branches"
+                            : this.state.selectedBranches === "none" || this.state.selectedBranches === ""
+                                ? "No branches selected"
+                                : this.state.selectedBranches.split(",").map(b => b.replace("refs/heads/", "")).join(", ")}
+                    </div>
                 </h2>
 
                 <div className="content">
