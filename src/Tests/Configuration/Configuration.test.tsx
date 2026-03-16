@@ -553,6 +553,10 @@ describe("Configuration", () => {
             <ConfigurationWidget></ConfigurationWidget>
         )
 
+        // Use a config with no pre-selected branch so items start selectable (not in "Select All" mode)
+        let configuration = filledWidgetConfiguration.clone();
+        configuration.buildBranch = "";
+
         await delay(1);
         const args: WidgetSettings = {
             name: "settings",
@@ -563,7 +567,7 @@ describe("Configuration", () => {
             lightboxOptions: undefined,
             customSettings: {
                 version: undefined,
-                data: JSON.stringify(filledWidgetConfiguration)
+                data: JSON.stringify(configuration)
             }
         }
         const widgetContext = new IWidgetConfigurationContext();
@@ -684,8 +688,8 @@ describe("Configuration", () => {
 
         await delay(1);
 
-        // Simulate clearing all branch selections (state = "all" = no branches explicitly selected)
-        widget.setState({ selectedBranches: "all" });
+        // Simulate clearing all branch selections (state = "none" = no branches explicitly selected)
+        widget.setState({ selectedBranches: "none" });
 
         await delay(200);
 
@@ -734,6 +738,57 @@ describe("Configuration", () => {
         await widget.load(args, widgetContext);
 
         await delay(1);
+
+        const result = await widget.onSave();
+
+        // @ts-ignore
+        expect(result.isValid).toEqual(true);
+    });
+
+    test('Configuration - Validate that "Select All" (selectedBranches="all") results in valid configuration', async() => {
+        render(
+            <ConfigurationWidget></ConfigurationWidget>
+        )
+
+        let configuration = filledWidgetConfiguration.clone();
+        configuration.buildBranch = "refs/heads/master";
+
+        await delay(1);
+        const args: WidgetSettings = {
+            name: "settings",
+            size: {
+                rowSpan: 3,
+                columnSpan: 3
+            },
+            lightboxOptions: undefined,
+            customSettings: {
+                version: undefined,
+                data: JSON.stringify(configuration)
+            }
+        }
+        const widgetContext = new IWidgetConfigurationContext();
+
+        mockGetDefinitions.mockReturnValue([
+            createDefinition(1, "definitionName")
+        ]);
+
+        mockGetBranches.mockReturnValue([
+            createBranchStat("master")
+        ]);
+
+        mockGetTags.mockReturnValue([]);
+
+        // @ts-ignore
+        const widget = spyWidgetCallBackAccessor as ConfigurationWidget;
+
+        await widget.load(args, widgetContext);
+
+        await delay(1);
+
+        // Simulate "Select All" click which sets selectedBranches to "all"
+        widget.setState({ selectedBranches: "all" });
+
+        await delay(200);
 
         const result = await widget.onSave();
 
