@@ -29,6 +29,7 @@ import {Checkbox} from "azure-devops-ui/Checkbox";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 import {ConfigurationWidgetState, IProps, WidgetConfigurationSettings} from "./State";
 import {showRootComponent} from "./Common";
+import {buildSelectionString, exportJsonAsFile} from "./utils";
 import {startsWith} from "azure-devops-ui/Core/Util/String";
 
 export class ConfigurationWidget extends React.Component<IProps, ConfigurationWidgetState> implements IWidgetConfiguration{
@@ -429,18 +430,9 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      * @param _selectedDropdown
      */
     private onBranchDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
-        let newBranchState = "";
-        for(let i = 0; i < this.branchDropdownMultiSelection.value.length; i++) {
-            const selectionRange = this.branchDropdownMultiSelection.value[i];
-            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++) {
-                newBranchState += this.branchItems[j].id + ",";
-            }
-        }
-        if(newBranchState.endsWith(',')) {
-            newBranchState = newBranchState.substring(0, newBranchState.length - 1);
-        }
+        const newBranchState = buildSelectionString(this.branchItems, this.branchDropdownMultiSelection.value, "none");
         this.setState({
-            selectedBranches: newBranchState === "" ? "none" : newBranchState
+            selectedBranches: newBranchState
         });
     };
 
@@ -467,21 +459,9 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      * @param _selectedDropdown
      */
     private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
-
-        let newTagState = "";
-        for(let i = 0;  i < this.tagDropdownMultiSelection.value.length;i++) {
-            const selectionRange = this.tagDropdownMultiSelection.value[i];
-            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++)
-            {
-                newTagState += this.tagItems[j].id + ",";
-            }
-        }
-        if(newTagState.endsWith(','))
-        {
-            newTagState = newTagState.substring(0, newTagState.length - 1);
-        }
+        const newTagState = buildSelectionString(this.tagItems, this.tagDropdownMultiSelection.value, "all");
         this.setState({
-            selectedTag:  newTagState === "" ? "all" : newTagState
+            selectedTag: newTagState
         });
     }
 
@@ -500,28 +480,12 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     }
 
     private onExportSavedConfig = () => {
-        const blob = new Blob([this.persistedConfigurationData], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "widget-configuration-saved.json";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        exportJsonAsFile(this.persistedConfigurationData, "widget-configuration-saved.json");
         console.info("Saved configuration exported");
     };
 
     private onExportWorkingConfig = () => {
-        const blob = new Blob([this.workingConfigurationData], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "widget-configuration-working.json";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        exportJsonAsFile(this.workingConfigurationData, "widget-configuration-working.json");
         console.info("Working configuration exported");
     };
 

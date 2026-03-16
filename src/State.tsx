@@ -2,6 +2,19 @@ import {TaskResult, TimelineRecord, TimelineRecordState} from "@tucrail/azure-de
 import {BuildWithTimeline} from "./Models/BuildWithTimeline";
 import {SemanticVersion} from "@tucrail/azure-devops-extension-api/Dashboard/Dashboard";
 
+/**
+ * Migrates V1 settings (where numeric fields may be stored as strings) to their proper types in-place.
+ * @param settings The settings object to migrate
+ */
+function migrateV1Settings(settings: WidgetConfigurationSettings): void {
+    if (typeof settings.buildCount === "string") {
+        settings.buildCount = parseInt(settings.buildCount);
+    }
+    if (typeof settings.buildDefinition === "string") {
+        settings.buildDefinition = parseInt(settings.buildDefinition);
+    }
+}
+
 export class WidgetConfigurationSettings {
     public buildDefinition: number;
     public buildBranch: string;
@@ -67,14 +80,7 @@ export class ConfigurationWidgetState {
     public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version?: SemanticVersion) : ConfigurationWidgetState {
         if(!version?.major || version.major === 1)
         {
-            if(typeof settings.buildCount === "string")
-            {
-                settings.buildCount = parseInt(settings.buildCount);
-            }
-            if(typeof settings.buildDefinition === "string")
-            {
-                settings.buildDefinition = parseInt(settings.buildDefinition);
-            }
+            migrateV1Settings(settings);
         }
         return new ConfigurationWidgetState(settings.buildDefinition as number, settings.buildBranch, settings.defaultTag ?? "all",
             settings.buildCount as number, settings.showStages, settings.buildBranch === "", settings.matchAnyTag);
@@ -136,14 +142,7 @@ export class WidgetState {
     public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version?: SemanticVersion) : WidgetState {
         if(!version?.major || version.major === 1)
         {
-            if(typeof settings.buildCount === "string")
-            {
-                settings.buildCount = parseInt(settings.buildCount);
-            }
-            if(typeof settings.buildDefinition === "string")
-            {
-                settings.buildDefinition = parseInt(settings.buildDefinition);
-            }
+            migrateV1Settings(settings);
         }
         return new WidgetState(settings.definitionName, settings.buildDefinition, settings.buildBranch, settings.defaultTag ?? "all",
             settings.buildCount as number, settings.showStages, settings.matchAnyTag);

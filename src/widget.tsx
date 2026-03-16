@@ -27,6 +27,7 @@ import {
 import {BuildWithTimeline} from "./Models/BuildWithTimeline";
 import {BuildResultRow} from "./Components/BuildResultRow";
 import {showRootComponent} from "./Common";
+import {buildSelectionString} from "./utils";
 
 export class Widget extends React.Component<IProps, WidgetState> implements IConfigurableWidget {
 
@@ -246,21 +247,9 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
     //#region Event handlers
 
     private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
-
-        let newTagState = "";
-        for(let i = 0;  i < this.tagDropdownMultiSelection.value.length;i++) {
-            const selectionRange = this.tagDropdownMultiSelection.value[i];
-            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++)
-            {
-                newTagState += this.tagItems[j].id + ",";
-            }
-        }
-        if(newTagState.endsWith(','))
-        {
-            newTagState = newTagState.substring(0, newTagState.length - 1);
-        }
+        const newTagState = buildSelectionString(this.tagItems, this.tagDropdownMultiSelection.value, "all");
         this.setState({
-            selectedTag:  newTagState === "" ? "all" : newTagState
+            selectedTag: newTagState
         }, async () => {
             await this.initializeState(this.state);
         });
