@@ -1,7 +1,6 @@
 /node_modules/
 /sdk/node_modules/
 *.vsix
-**/.package-lock.json
 package-lock.json
 dist/
 test-report.xml
