@@ -532,7 +532,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                                   },
                                   {
                                       className: "bolt-dropdown-action-right-button",
-                                      disabled: this.branchDropdownMultiSelection.selectedCount === 0,
+                                      disabled: this.branchDropdownMultiSelection.selectedCount === 0 && !(this.state.selectedBranches === "all"),
                                       iconProps: { iconName: "Clear" },
                                       text: "Clear",
                                       onClick: () => {
