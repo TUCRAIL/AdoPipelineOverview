@@ -428,6 +428,16 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         this.setState({ selectedBranches: "all" });
     }
 
+    private onSelectAllBranchesClicked() {
+        if (this.branchItems.length === 0) {
+            return;
+        }
+        this.branchDropdownMultiSelection.clear();
+        this.branchDropdownMultiSelection.select(0, this.branchItems.length, true, true);
+        const allBranches = this.branchItems.map(item => item.id as string).join(",");
+        this.setState({ selectedBranches: allBranches });
+    }
+
 
     /**
      * Event handler for when the tag dropdown is changed
@@ -502,7 +512,18 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                               noItemsText={"No branch was found"}
                               width={320}
                               className={"dropdown-element"}
+                              showFilterBox={true}
+                              filterPlaceholderText={"Search branches..."}
                               actions={[
+                                  {
+                                      className: "bolt-dropdown-action-right-button",
+                                      disabled: this.branchItems.length === 0,
+                                      iconProps: { iconName: "CheckList" },
+                                      text: "Select all",
+                                      onClick: () => {
+                                          this.onSelectAllBranchesClicked();
+                                      }
+                                  },
                                   {
                                       className: "bolt-dropdown-action-right-button",
                                       disabled: this.branchDropdownMultiSelection.selectedCount === 0,
