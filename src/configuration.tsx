@@ -495,7 +495,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                 <div id={"build_definition"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <label>Build Definition: </label>
                     <Dropdown items={this.buildDefinitionItems}
-                              width={320}
                               noItemsText={"No build definition was found"}
                               className={"dropdown-element"}
                               placeholder={this.state.selectedBuildDefinitionId === -1 ? "Select a build definition" : this.selectedBuildDefinition.value}
@@ -510,8 +509,8 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                     <Dropdown role={"branch-dropdown"}
                               items={this.branchItems}
                               noItemsText={"No branch was found"}
-                              width={320}
-                              className={"dropdown-element"}
+                              containerClassName={"full-width"}
+                              className={"dropdown-element full-width"}
                               showFilterBox={true}
                               filterPlaceholderText={"Search branches..."}
                               actions={[

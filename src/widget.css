@@ -6,6 +6,10 @@
     width: 100%;
 }
 
+.full-width {
+    width: 100%;
+}
+
 .spinner {
     animation: spin 6s linear infinite;
     mask-size: cover;
