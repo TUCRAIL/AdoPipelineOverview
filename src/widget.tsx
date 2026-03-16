@@ -64,7 +64,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         widgetSettings: WidgetSettings
     ): Promise<WidgetStatus> {
         try {
-            console.debug("Loading widget data")
+            console.info("Loading widget data")
             const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
 
             if(settings === null || settings === undefined || typeof settings === "undefined")
@@ -91,8 +91,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         widgetSettings: WidgetSettings
     ): Promise<WidgetStatus | undefined> {
         try {
-            console.debug("Reloading widget data")
-            console.debug(JSON.stringify(widgetSettings.customSettings.data))
+            console.info("Reloading widget data")
             const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
             if(settings === null || settings === undefined || typeof settings === "undefined")
             {
@@ -125,7 +124,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         const settings = WidgetState.getEmptyObject();
         settings.copy(widgetState);
 
-        console.debug("Setting state from widget settings" + JSON.stringify(settings));
+        console.info(`Initializing widget state for build definition ${settings.selectedBuildDefinitionId} on project ${this.projectId}`);
 
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         let buildPages: Build[] = [];
@@ -170,6 +169,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
 
         builds = buildPages.map(buildPage => buildPage).slice(0, settings.buildCount);
 
+        console.info(`Found ${buildPages.length} builds matching criteria`);
 
         this.builds = [];
         const tempBuilds: BuildWithTimeline[] = [];
@@ -208,7 +208,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const tags = await buildClient.getTags(this.projectId);
 
-        console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
+        console.info(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
         this.tagItems = [];
         if (tags.length > 0) {
             tags.sort().forEach(tag => {

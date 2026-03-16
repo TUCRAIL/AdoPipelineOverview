@@ -1,6 +1,7 @@
 import * as SDK from "azure-devops-extension-sdk";
 import {ObservableValue} from "azure-devops-ui/Core/Observable";
 import {Dropdown} from "azure-devops-ui/Dropdown";
+import {Button} from "azure-devops-ui/Button";
 import { Toggle } from "azure-devops-ui/Toggle";
 import {
     WidgetConfigurationSave,
@@ -40,6 +41,8 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     private branchDropdownMultiSelection = new DropdownMultiSelection();
 
     private widgetConfigurationContext?: IWidgetConfigurationContext;
+    private workingConfigurationData: string = "{}";
+    private persistedConfigurationData: string = "{}";
 
     private branchItems : IListBoxItem[] = [];
 
@@ -62,7 +65,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             SDK.register('DeploymentsWidget.Configuration', this
             )
             SDK.resize(350, 500)
-            console.debug("Initializing state")
+            console.info("Initializing configuration widget state")
             //this.initializeState().then();
         })
     }
@@ -78,7 +81,13 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     }
 
     async onSave(): Promise<SaveStatus> {
-        return await this.validateConfiguration();
+        const result = await this.validateConfiguration();
+        if (result.isValid && (result as any).customSettings) {
+            this.workingConfigurationData = (result as any).customSettings.data;
+            this.persistedConfigurationData = (result as any).customSettings.data;
+            console.info("Configuration saved successfully");
+        }
+        return result;
     }
 
     async preload(_widgetSettings: WidgetSettings) {
@@ -91,10 +100,14 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     ): Promise<WidgetStatus> {
         try {
             this.widgetConfigurationContext = widgetConfigurationContext;
+            if (widgetSettings.customSettings.data) {
+                this.workingConfigurationData = widgetSettings.customSettings.data;
+                this.persistedConfigurationData = widgetSettings.customSettings.data;
+            }
             await this.setStateFromWidgetSettings(widgetSettings);
             return WidgetStatusHelper.Success();
         } catch (e) {
-            console.error(e)
+            console.error("Failed loading configuration: " + e)
             return WidgetStatusHelper.Success((e as any).toString());
             //return WidgetStatusHelper.Failure((e as any).toString());
         }
@@ -104,10 +117,14 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         widgetSettings: WidgetSettings
     ): Promise<WidgetStatus> {
         try {
+            if (widgetSettings.customSettings.data) {
+                this.workingConfigurationData = widgetSettings.customSettings.data;
+                this.persistedConfigurationData = widgetSettings.customSettings.data;
+            }
             await this.setStateFromWidgetSettings(widgetSettings);
             return WidgetStatusHelper.Success();
         } catch (e) {
-            console.error(e)
+            console.error("Failed reloading configuration: " + e)
             return WidgetStatusHelper.Failure((e as any).toString());
         }
     }
@@ -159,7 +176,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             branch.name : `refs/heads/${branch.name}`)
             .filter((value, index, self) => self.indexOf(value) === index);
 
-        console.debug(`Starting to populate the branch dropdown. ${branchesArray.length} branches to add`);
+        console.info(`Starting to populate the branch dropdown. ${branchesArray.length} branches to add`);
 
         branchesArray.forEach(branch => {
             const newItem : IListBoxItem = {
@@ -167,7 +184,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                 text: branch.replace("refs/heads/", "")
             }
             this.branchItems.push(newItem);
-            console.debug("Adding branch " + branch);
         });
 
         if (buildBranch === "all") {
@@ -211,7 +227,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const tags = await buildClient.getTags(this.projectId);
 
-        console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
+        console.info(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
         this.tagItems = [];
         if (tags.length > 0) {
             tags.sort().forEach(tag => {
@@ -260,9 +276,9 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      */
     private async initializeState() {
         const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
-        console.debug("Entered registration")
+        console.info("Initializing project and build definitions list")
         const project = await projectService.getProject()
-        console.debug(`project id is ${project?.id}`)
+        console.info(`Project id is ${project?.id}`)
         this.projectId = project?.id!;
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const buildDefinitions = await buildClient.getDefinitions(project!.id, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
@@ -323,7 +339,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             }
             if(errorMessage !== "")
             {
-                console.debug("Invalid configuration: \n" +
+                console.error("Invalid configuration: \n" +
                     errorMessage);
                 return WidgetConfigurationSave.Invalid();
             }
@@ -331,7 +347,8 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                 const customSettings: CustomSettings = {
                     data: JSON.stringify(configuration)
                 };
-                console.debug("Configuration is valid");
+                console.info("Configuration is valid");
+                this.workingConfigurationData = customSettings.data;
                 await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationChange,
                     ConfigurationEvent.Args(customSettings));
                 return  WidgetConfigurationSave.Valid(customSettings);
@@ -362,7 +379,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             selectedBranches: "none"
         });
         this.selectedBuildDefinition.value = selectedDropdown.text || "";
-        console.debug(`Selected new build definition ${this.selectedBuildDefinition.value}`);
+        console.info(`Selected new build definition ${this.selectedBuildDefinition.value}`);
         this.setState({
             selectedBuildDefinitionId: this.getDataAsBuildReference(selectedDropdown.data!).id,
             selectedBranches: "none"
@@ -371,8 +388,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             Number(this.getDataAsBuildReference(d).id) === Number(this.getDataAsBuildReference(selectedDropdown.data!).id));
         await this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'none');
         await this.fillTagsDropDown();
-
-        console.debug(`Selected new build definition ${this.state.selectedBuildDefinitionId}`);
     };
 
     /**
@@ -483,6 +498,32 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             matchAnyTagSelected: this.state.matchAnyTagSelected === undefined ? true : checked
         })
     }
+
+    private onExportSavedConfig = () => {
+        const blob = new Blob([this.persistedConfigurationData], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "widget-configuration-saved.json";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        console.info("Saved configuration exported");
+    };
+
+    private onExportWorkingConfig = () => {
+        const blob = new Blob([this.workingConfigurationData], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "widget-configuration-working.json";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        console.info("Working configuration exported");
+    };
 
     //#endregion
 
@@ -595,6 +636,13 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                         onChange={this.onShowStagesChanged}
                         label={"Show Stages"}
                     ></Checkbox>
+                </div>
+                <div id={"export saved configuration"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
+                    <Button text="Export Saved Configuration" onClick={this.onExportSavedConfig} iconProps={{iconName: "Save"}} />
+                </div>
+
+                <div id={"export working configuration"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
+                    <Button text="Export Working Configuration" onClick={this.onExportWorkingConfig} iconProps={{iconName: "Save"}} />
                 </div>
 
 
