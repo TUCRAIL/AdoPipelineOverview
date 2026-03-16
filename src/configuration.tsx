@@ -551,7 +551,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                         className={"dropdown-element"}
                         label={"Builds to show"}/>
 
-                "</div>"
+                </div>
                 <div id={"tags"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <label>Tags: </label>
                     <Dropdown role={"tag-dropdown"}
