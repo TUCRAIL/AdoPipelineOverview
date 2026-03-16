@@ -9,7 +9,6 @@ import {
     WidgetSettings, WidgetStatusHelper, WidgetStatus
 } from "@tucrail/azure-devops-extension-api/Dashboard";
 
-import {Button} from "azure-devops-ui/Button";
 import React = require("react")
 import {
     ConfigurationEvent,
@@ -38,14 +37,13 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     private buildDefinitionItems : IListBoxItem[] = [];
     private selectedBuildDefinition = new ObservableValue<string>("");
     private tagDropdownMultiSelection = new DropdownMultiSelection();
+    private branchDropdownMultiSelection = new DropdownMultiSelection();
 
     private widgetConfigurationContext?: IWidgetConfigurationContext;
 
     private branchItems : IListBoxItem[] = [];
 
     private tagItems : IListBoxItem[] = [];
-
-    private savedConfigurationData: string | undefined | null;
 
     //#endregion
 
@@ -64,7 +62,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             SDK.register('DeploymentsWidget.Configuration', this
             )
             SDK.resize(350, 500)
-            console.info("Initializing configuration widget state")
+            console.debug("Initializing state")
             //this.initializeState().then();
         })
     }
@@ -75,16 +73,12 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         }
         catch (e)
         {
-            console.error("Error during component update validation:", e)
+            console.error(e)
         }
     }
 
     async onSave(): Promise<SaveStatus> {
-        const result = await this.validateConfiguration();
-        if ((result as any).customSettings) {
-            this.savedConfigurationData = (result as any).customSettings.data;
-        }
-        return result;
+        return await this.validateConfiguration();
     }
 
     async preload(_widgetSettings: WidgetSettings) {
@@ -100,7 +94,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             await this.setStateFromWidgetSettings(widgetSettings);
             return WidgetStatusHelper.Success();
         } catch (e) {
-            console.error("Failed to load configuration widget:", e)
+            console.error(e)
             return WidgetStatusHelper.Success((e as any).toString());
             //return WidgetStatusHelper.Failure((e as any).toString());
         }
@@ -113,7 +107,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             await this.setStateFromWidgetSettings(widgetSettings);
             return WidgetStatusHelper.Success();
         } catch (e) {
-            console.error("Failed to reload configuration widget:", e)
+            console.error(e)
             return WidgetStatusHelper.Failure((e as any).toString());
         }
     }
@@ -128,7 +122,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      * @private
      */
     private async setStateFromWidgetSettings(widgetSettings: WidgetSettings) {
-        this.savedConfigurationData = widgetSettings.customSettings.data;
         const settings = widgetSettings.customSettings.data;
         if(settings === null || settings === undefined || typeof settings === "undefined")
         {
@@ -155,6 +148,8 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      */
     private async fillBranchesDropDown(definitionRepositoryId: string, buildBranch: string) {
         this.branchItems = [];
+        this.branchDropdownMultiSelection.clear();
+        this.branchDropdownMultiSelection.clearUnselectable();
         const codeClient = getClient<GitRestClient>(GitRestClient);
 
         const repositoryBranches = await codeClient.getBranches(definitionRepositoryId,
@@ -164,35 +159,43 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             branch.name : `refs/heads/${branch.name}`)
             .filter((value, index, self) => self.indexOf(value) === index);
 
-        console.info(`Starting to populate the branch dropdown. ${branchesArray.length} branches to add`);
-
-        this.branchItems.push({
-            id: "all",
-            text: "all"
-        });
-
-        let foundMatchingBranch = false;
-        const RefBuildBranch = buildBranch.startsWith("refs/heads/") ? buildBranch : `refs/heads/${buildBranch}`;
+        console.debug(`Starting to populate the branch dropdown. ${branchesArray.length} branches to add`);
 
         branchesArray.forEach(branch => {
             const newItem : IListBoxItem = {
                 id: branch,
                 text: branch.replace("refs/heads/", "")
             }
-            this.branchItems.push(newItem)
-            if(branch === RefBuildBranch)
-            {
-                foundMatchingBranch = true;
-                console.debug("Found matching branch: " + RefBuildBranch)
-            }
+            this.branchItems.push(newItem);
+            console.debug("Adding branch " + branch);
         });
 
-        if(!foundMatchingBranch)
-        {
-            this.setState({
-                    selectedBranch: "all"
+        if (buildBranch === "all") {
+            // Restore "Select All" state: disable all items so individual toggles are ignored
+            this.branchDropdownMultiSelection.addUnselectable(0, this.branchItems.length);
+            this.setState({ selectedBranches: "all" });
+        } else if (buildBranch !== "none" && buildBranch !== "") {
+            // Restore specific branch selections (supports comma-separated multi-branch or legacy single branch)
+            const savedBranches = buildBranch.split(",").map(b =>
+                b.trim().startsWith("refs/heads/") ? b.trim() : `refs/heads/${b.trim()}`);
+            let foundAny = false;
+            for (const savedBranch of savedBranches) {
+                const index = this.branchItems.findIndex((item) => item.id === savedBranch);
+                if (index !== -1) {
+                    foundAny = true;
+                    this.branchDropdownMultiSelection.select(index, undefined, true, true);
                 }
-            );
+            }
+            if (foundAny) {
+                this.setState({
+                    selectedBranches: savedBranches.filter(b =>
+                        this.branchItems.some(item => item.id === b)).join(",")
+                });
+            } else {
+                this.setState({ selectedBranches: "none" });
+            }
+        } else {
+            this.setState({ selectedBranches: "none" });
         }
 
         this.setState({
@@ -208,7 +211,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const tags = await buildClient.getTags(this.projectId);
 
-        console.info(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
+        console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
         this.tagItems = [];
         if (tags.length > 0) {
             tags.sort().forEach(tag => {
@@ -257,9 +260,9 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      */
     private async initializeState() {
         const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
-        console.info("Initializing project and build definitions list")
+        console.debug("Entered registration")
         const project = await projectService.getProject()
-        console.info(`Project id is ${project?.id}`)
+        console.debug(`project id is ${project?.id}`)
         this.projectId = project?.id!;
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const buildDefinitions = await buildClient.getDefinitions(project!.id, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
@@ -279,7 +282,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                     isBranchDropdownDisabled: false
                 });
                 await this.fillBranchesDropDown(this.getDataAsBuildReference(definition).repository.id.toString(),
-                    this.state.selectedBranch);
+                    this.state.selectedBranches);
                 await this.fillTagsDropDown();
             }
         }));
@@ -292,17 +295,11 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     private async validateConfiguration() : Promise<SaveStatus>
     {
         try {
-            let branchName = this.state.selectedBranch;
-            if(branchName === "all")
-            {
-
-            }
-            else if(branchName.startsWith("refs/heads/"))
-            {
-
-            }
-            else {
-                branchName = `refs/heads/${branchName}`;
+            let branchName = this.state.selectedBranches;
+            if(branchName !== "all" && branchName !== "none" && branchName !== "") {
+                branchName = branchName.split(",")
+                    .map(b => b.trim().startsWith("refs/heads/") ? b.trim() : `refs/heads/${b.trim()}`)
+                    .join(",");
             }
             let configuration = ConfigurationWidgetState
                 .toWidgetConfigurationSettings(this.state, this.selectedBuildDefinition.value)
@@ -312,9 +309,9 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             {
                 errorMessage += "The build definition selected is invalid \n";
             }
-            if(configuration.buildBranch === "")
+            if(configuration.buildBranch === "" || configuration.buildBranch === "none")
             {
-                errorMessage += "The branch selected is invalid \n";
+                errorMessage += "At least one branch must be selected \n";
             }
             if(typeof configuration.buildCount === "string")
             {
@@ -326,7 +323,7 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             }
             if(errorMessage !== "")
             {
-                console.warn("Invalid configuration: \n" +
+                console.debug("Invalid configuration: \n" +
                     errorMessage);
                 return WidgetConfigurationSave.Invalid();
             }
@@ -334,14 +331,14 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                 const customSettings: CustomSettings = {
                     data: JSON.stringify(configuration)
                 };
-                console.info("Configuration is valid");
+                console.debug("Configuration is valid");
                 await this.widgetConfigurationContext?.notify(ConfigurationEvent.ConfigurationChange,
                     ConfigurationEvent.Args(customSettings));
                 return  WidgetConfigurationSave.Valid(customSettings);
             }
         }
         catch (e) {
-            console.error("Failed to validate configuration:", e);
+            console.error(e);
             return WidgetConfigurationSave.Invalid();
         }
     }
@@ -356,21 +353,26 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      * @param selectedDropdown
      */
     private onBuildDropdownChange = async (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+        this.branchDropdownMultiSelection.clear();
+        this.branchDropdownMultiSelection.clearUnselectable();
+        this.tagDropdownMultiSelection.clear();
         this.setState({
             isBranchDropdownDisabled: true,
             selectedTag: 'all',
-            selectedBranch: "all"
+            selectedBranches: "none"
         });
         this.selectedBuildDefinition.value = selectedDropdown.text || "";
-        console.info(`Selected new build definition ${this.selectedBuildDefinition.value}`);
+        console.debug(`Selected new build definition ${this.selectedBuildDefinition.value}`);
         this.setState({
             selectedBuildDefinitionId: this.getDataAsBuildReference(selectedDropdown.data!).id,
-            selectedBranch: "all"
+            selectedBranches: "none"
         });
         this.buildDefinitionItems!.find(d =>
             Number(this.getDataAsBuildReference(d).id) === Number(this.getDataAsBuildReference(selectedDropdown.data!).id));
-        await this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'all');
+        await this.fillBranchesDropDown(this.getDataAsBuildReference(selectedDropdown.data!).repository.id.toString(), 'none');
         await this.fillTagsDropDown();
+
+        console.debug(`Selected new build definition ${this.state.selectedBuildDefinitionId}`);
     };
 
     /**
@@ -409,14 +411,39 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     /**
      * Event handler for when the branch dropdown is changed
      * @param _event
-     * @param selectedDropdown
+     * @param _selectedDropdown
      */
-    private onBranchDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, selectedDropdown: IListBoxItem) => {
+    private onBranchDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
+        let newBranchState = "";
+        for(let i = 0; i < this.branchDropdownMultiSelection.value.length; i++) {
+            const selectionRange = this.branchDropdownMultiSelection.value[i];
+            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++) {
+                newBranchState += this.branchItems[j].id + ",";
+            }
+        }
+        if(newBranchState.endsWith(',')) {
+            newBranchState = newBranchState.substring(0, newBranchState.length - 1);
+        }
         this.setState({
-            selectedBranch: selectedDropdown.text === undefined ? "" : selectedDropdown.text
+            selectedBranches: newBranchState === "" ? "none" : newBranchState
         });
     };
 
+    private onClearBranchDropdownSelectionClicked() {
+        this.branchDropdownMultiSelection.clear();
+        this.branchDropdownMultiSelection.clearUnselectable();
+        this.setState({ selectedBranches: "none" });
+    }
+
+    private onSelectAllBranchesClicked() {
+        if (this.branchItems.length === 0) {
+            return;
+        }
+        this.branchDropdownMultiSelection.clear();
+        this.branchDropdownMultiSelection.clearUnselectable();
+        this.branchDropdownMultiSelection.addUnselectable(0, this.branchItems.length);
+        this.setState({ selectedBranches: "all" });
+    }
 
 
     /**
@@ -457,28 +484,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         })
     }
 
-    private onExportConfig = () => {
-        let configuration: WidgetConfigurationSettings;
-        if (this.savedConfigurationData) {
-            try {
-                configuration = JSON.parse(this.savedConfigurationData);
-            } catch (e) {
-                console.error("Failed to parse saved configuration for export:", e);
-                configuration = WidgetConfigurationSettings.getEmptyObject();
-            }
-        } else {
-            configuration = WidgetConfigurationSettings.getEmptyObject();
-        }
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(configuration, null, 2));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", "widget-config.json");
-        document.body.appendChild(downloadAnchorNode); // required for firefox
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
-        console.info("Configuration exported");
-    }
-
     //#endregion
 
     //#region Helper methods
@@ -497,7 +502,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                 <div id={"build_definition"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <label>Build Definition: </label>
                     <Dropdown items={this.buildDefinitionItems}
-                              width={320}
                               noItemsText={"No build definition was found"}
                               className={"dropdown-element"}
                               placeholder={this.state.selectedBuildDefinitionId === -1 ? "Select a build definition" : this.selectedBuildDefinition.value}
@@ -509,13 +513,40 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
 
                 <div id={"branch"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <label>Branch: </label>
-                    <Dropdown items={this.branchItems}
+                    <Dropdown role={"branch-dropdown"}
+                              items={this.branchItems}
                               noItemsText={"No branch was found"}
-                              width={320}
-                              className={"dropdown-element"}
-                              placeholder={this.state.selectedBranch === "" ? "Select a branch" : this.state.selectedBranch.replace("refs/heads/", "")}
+                              containerClassName={"full-width"}
+                              className={"dropdown-element full-width"}
+                              showFilterBox={true}
+                              filterPlaceholderText={"Search branches..."}
+                              actions={[
+                                  {
+                                      className: "bolt-dropdown-action-right-button",
+                                      disabled: this.branchItems.length === 0,
+                                      iconProps: { iconName: "CheckList" },
+                                      text: "Select all",
+                                      onClick: () => {
+                                          this.onSelectAllBranchesClicked();
+                                      }
+                                  },
+                                  {
+                                      className: "bolt-dropdown-action-right-button",
+                                      disabled: this.branchDropdownMultiSelection.selectedCount === 0 && !(this.state.selectedBranches === "all"),
+                                      iconProps: { iconName: "Clear" },
+                                      text: "Clear",
+                                      onClick: () => {
+                                          this.onClearBranchDropdownSelectionClicked();
+                                      }
+                                  }
+                              ]}
+                              placeholder={this.state.selectedBranches === "" ? "Select a branch" :
+                                  this.state.selectedBranches === "none" ? "No branches selected" :
+                                  this.state.selectedBranches === "all" ? "All branches" :
+                                  this.state.selectedBranches.split(",").map(b => b.replace("refs/heads/", "")).join(", ")}
                               onSelect={this.onBranchDropdownChange}
-                              disabled={this.state.isBranchDropdownDisabled}/>
+                              disabled={this.state.isBranchDropdownDisabled}
+                              selection={this.branchDropdownMultiSelection}/>
 
                 </div>
                 <div id={"build_count"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
@@ -557,7 +588,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                     </Toggle>
 
                 </div>
-
                 <div id={"show stages"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
                     <Checkbox
                         checked={this.state.showStages}
@@ -565,10 +595,6 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
                         onChange={this.onShowStagesChanged}
                         label={"Show Stages"}
                     ></Checkbox>
-                </div>
-
-                <div id={"export config"} className="flex-row" style={{margin: "8px", alignItems: "center"}}>
-                    <Button text="Export Saved Configuration" onClick={this.onExportConfig} iconProps={{iconName: "Save"}} />
                 </div>
 
 

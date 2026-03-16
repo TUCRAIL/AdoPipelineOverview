@@ -64,7 +64,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         widgetSettings: WidgetSettings
     ): Promise<WidgetStatus> {
         try {
-            console.info("Loading widget data")
+            console.debug("Loading widget data")
             const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
 
             if(settings === null || settings === undefined || typeof settings === "undefined")
@@ -79,7 +79,8 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
             }
             return WidgetStatusHelper.Success();
         } catch (e) {
-            console.error("Failed loading the widget data:", e)
+            console.error("Failed loading the widget data")
+            console.error(e)
             return WidgetStatusHelper.Success();
             //return WidgetStatusHelper.Failure((e as any).toString());
         }
@@ -90,7 +91,8 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         widgetSettings: WidgetSettings
     ): Promise<WidgetStatus | undefined> {
         try {
-            console.info("Reloading widget data")
+            console.debug("Reloading widget data")
+            console.debug(JSON.stringify(widgetSettings.customSettings.data))
             const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
             if(settings === null || settings === undefined || typeof settings === "undefined")
             {
@@ -102,7 +104,8 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
             }
             return WidgetStatusHelper.Success();
         } catch (e) {
-            console.error("Failed reloading the widget data:", e)
+            console.error("Failed reloading the widget data")
+            console.error(e)
             return WidgetStatusHelper.Failure((e as any).toString());
         }
     }
@@ -122,32 +125,37 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         const settings = WidgetState.getEmptyObject();
         settings.copy(widgetState);
 
-        console.info(`Initializing widget state for build definition ${settings.selectedBuildDefinitionId} on branch ${settings.selectedBranch}`);
+        console.debug("Setting state from widget settings" + JSON.stringify(settings));
 
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         let buildPages: Build[] = [];
-        try {
-            if(settings.matchAnyTagSelected)
-            {
+        const branches = settings.selectedBranches === 'all'
+            ? [undefined as (string | undefined)]
+            : settings.selectedBranches === 'none' || settings.selectedBranches === ''
+                ? []
+                : settings.selectedBranches.split(',').map(b => b.trim());
+        if(settings.matchAnyTagSelected)
+        {
+            for(const branch of branches) {
                 for(let tag of settings.selectedTag?.split(',') ?? []) {
                     let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
                         undefined, undefined, undefined, undefined, undefined, undefined, undefined,
                         settings.selectedTag === 'all' ? undefined : [tag], undefined, settings.buildCount, undefined,
-                        undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.selectedBranch === 'all' ? undefined : settings.selectedBranch,
+                        undefined, undefined, BuildQueryOrder.StartTimeDescending, branch,
                         undefined, undefined, undefined);
                     buildPages = buildPages.concat(buildPage);
                 }
             }
-            else {
+        }
+        else {
+            for(const branch of branches) {
                 let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
                     undefined, undefined, undefined, undefined, undefined, undefined, undefined,
                     settings.selectedTag === 'all' ? undefined : settings.selectedTag?.split(',') ?? [], undefined, settings.buildCount, undefined,
-                    undefined, undefined, BuildQueryOrder.StartTimeDescending, settings.selectedBranch === 'all' ? undefined : settings.selectedBranch,
+                    undefined, undefined, BuildQueryOrder.StartTimeDescending, branch,
                     undefined, undefined, undefined);
                 buildPages = buildPages.concat(buildPage);
             }
-        } catch (e) {
-            console.error("Failed to fetch builds:", e);
         }
         buildPages = buildPages.filter((value, index, self) => self.indexOf(value) === index);
 
@@ -156,7 +164,6 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
             return b.id - a.id;
         });
 
-        console.info(`Found ${buildPages.length} builds matching criteria`);
 
         let builds: Build[];
 
@@ -167,17 +174,12 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         this.builds = [];
         const tempBuilds: BuildWithTimeline[] = [];
         for (let build of builds) {
-            try {
-                console.debug(`Fetching timeline for build ${build.id}`);
-                const timeline = await buildClient.getBuildTimeline(this.projectId, build.id);
-                const newBuild = new BuildWithTimeline(build, timeline);
-                newBuild.timeline.records = newBuild.timeline.records.filter(this.filterTimelineByStage).sort(function (a, b) {
-                    return a.order - b.order;
-                });
-                tempBuilds.push(newBuild);
-            } catch (e) {
-                console.error(`Failed to fetch timeline for build ${build.id}:`, e);
-            }
+            const timeline = await buildClient.getBuildTimeline(this.projectId, build.id);
+            const newBuild = new BuildWithTimeline(build, timeline);
+            newBuild.timeline.records = newBuild.timeline.records.filter(this.filterTimelineByStage).sort(function (a, b) {
+                return a.order - b.order;
+            });
+            tempBuilds.push(newBuild);
         }
 
         this.builds = tempBuilds;
@@ -206,7 +208,7 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
         const tags = await buildClient.getTags(this.projectId);
 
-        console.info(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
+        console.debug(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
         this.tagItems = [];
         if (tags.length > 0) {
             tags.sort().forEach(tag => {
@@ -321,7 +323,13 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
 
                 <h2 className="title">
                     <div className="inner-title">{this.state.selectedDefinitionName ?? 'No definition found'}</div>
-                    <div className="subtitle">{this.state.selectedBranch.replace("refs/heads/", "") ?? 'No branch found'}</div>
+                    <div className="subtitle">
+                        {this.state.selectedBranches === "all"
+                            ? "All branches"
+                            : this.state.selectedBranches === "none" || this.state.selectedBranches === ""
+                                ? "No branches selected"
+                                : this.state.selectedBranches.split(",").map(b => b.replace("refs/heads/", "")).join(", ")}
+                    </div>
                 </h2>
 
                 <div className="content">
