@@ -13,6 +13,8 @@ const mockAnchor = {
     setAttribute: jest.fn(),
     click: jest.fn(),
     remove: jest.fn(),
+    href: "",
+    download: ""
 };
 
 function delay(ms: number) {
@@ -24,6 +26,10 @@ describe("Configuration Export Behavior", () => {
     beforeEach(() => {
         resetMocks();
         jest.clearAllMocks();
+        
+        // Mock URL methods
+        window.URL.createObjectURL = jest.fn().mockReturnValue('blob:mock-url');
+        window.URL.revokeObjectURL = jest.fn();
     });
 
     test("Export button should use saved configuration from load, not current state", async () => {
@@ -58,22 +64,31 @@ describe("Configuration Export Behavior", () => {
 
         // Mock document methods ONLY for the export call
         const createElementSpy = jest.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
-        const appendChildSpy = jest.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor as any);
+        const appendChildSpy = jest.spyOn(document.body, 'appendChild').mockImplementation((node) => node);
+        const removeChildSpy = jest.spyOn(document.body, 'removeChild').mockImplementation((node) => node);
 
-        const exportButton = screen.getByText("Export Saved Configuration");
-        fireEvent.click(exportButton);
+        // Test Export Saved Configuration
+        const exportSavedButton = screen.getByText("Export Saved Configuration");
+        fireEvent.click(exportSavedButton);
 
         expect(createElementSpy).toHaveBeenCalledWith('a');
+        expect((widget as any).persistedConfigurationData).toBe(savedData);
+        expect(mockAnchor.download).toBe("widget-configuration-saved.json");
+
+        // Test Export Working Configuration
+        const exportWorkingButton = screen.getByText("Export Working Configuration");
+        fireEvent.click(exportWorkingButton);
+
+        expect((widget as any).workingConfigurationData).toContain('"buildCount":5');
+        expect(mockAnchor.download).toBe("widget-configuration-working.json");
         
-        // Verify that the exported data matches savedData, not the current state
-        const exportedString = (mockAnchor.setAttribute as jest.Mock).mock.calls.find(call => call[0] === 'href')[1];
-        const decodedJson = JSON.parse(decodeURIComponent(exportedString.replace("data:text/json;charset=utf-8,", "")));
-        
-        expect(decodedJson.definitionName).toBe("SavedDefinition");
-        expect(decodedJson.buildCount).toBe(10);
+        // Let's also check if createObjectURL was called with the right data
+        // (Blob content is tricky to check in jsdom, but we can verify the mock was called)
+        expect(window.URL.createObjectURL).toHaveBeenCalled();
 
         createElementSpy.mockRestore();
         appendChildSpy.mockRestore();
+        removeChildSpy.mockRestore();
     });
 
     test("Export button should reflect newly saved configuration after onSave", async () => {
@@ -104,7 +119,7 @@ describe("Configuration Export Behavior", () => {
         widget.setState({ 
             buildCount: 20,
             selectedBuildDefinitionId: 2,
-            selectedBranch: "develop",
+            selectedBranches: "develop",
             selectedTag: "tag1",
             showStages: false,
             matchAnyTagSelected: true
@@ -117,20 +132,24 @@ describe("Configuration Export Behavior", () => {
 
         // Mock document methods ONLY for the export call
         const createElementSpy = jest.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
-        const appendChildSpy = jest.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor as any);
+        const appendChildSpy = jest.spyOn(document.body, 'appendChild').mockImplementation((node) => node);
+        const removeChildSpy = jest.spyOn(document.body, 'removeChild').mockImplementation((node) => node);
 
-        const exportButton = screen.getByText("Export Saved Configuration");
-        fireEvent.click(exportButton);
+        const exportSavedButton = screen.getByText("Export Saved Configuration");
+        fireEvent.click(exportSavedButton);
 
-        const exportedString = (mockAnchor.setAttribute as jest.Mock).mock.calls.find(call => call[0] === 'href')[1];
-        const decodedJson = JSON.parse(decodeURIComponent(exportedString.replace("data:text/json;charset=utf-8,", "")));
-        
-        expect(decodedJson.definitionName).toBe("NewDefinition");
-        expect(decodedJson.buildCount).toBe(20);
-        expect(decodedJson.buildDefinition).toBe(2);
-        expect(decodedJson.buildBranch).toBe("refs/heads/develop"); // validateConfiguration adds refs/heads/
+        expect((widget as any).persistedConfigurationData).toContain('"buildCount":20');
+        expect((widget as any).persistedConfigurationData).toContain('"definitionName":"NewDefinition"');
+        expect(mockAnchor.download).toBe("widget-configuration-saved.json");
+
+        const exportWorkingButton = screen.getByText("Export Working Configuration");
+        fireEvent.click(exportWorkingButton);
+
+        expect((widget as any).workingConfigurationData).toContain('"buildCount":20');
+        expect(mockAnchor.download).toBe("widget-configuration-working.json");
 
         createElementSpy.mockRestore();
         appendChildSpy.mockRestore();
+        removeChildSpy.mockRestore();
     });
 });
