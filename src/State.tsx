@@ -32,6 +32,20 @@ export class WidgetConfigurationSettings {
         return new WidgetConfigurationSettings(this.buildDefinition as number, this.buildBranch, this.definitionName,
             this.buildCount as number, this.defaultTag ?? "all", this.showStages, this.matchAnyTag);
     }
+
+    public static normalizeSettings(settings: WidgetConfigurationSettings, version?: SemanticVersion) {
+        if(!version?.major || version.major === 1)
+        {
+            if(typeof settings.buildCount === "string")
+            {
+                settings.buildCount = parseInt(settings.buildCount);
+            }
+            if(typeof settings.buildDefinition === "string")
+            {
+                settings.buildDefinition = parseInt(settings.buildDefinition);
+            }
+        }
+    }
 }
 
 export interface IProps {
@@ -65,17 +79,7 @@ export class ConfigurationWidgetState {
     }
 
     public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version?: SemanticVersion) : ConfigurationWidgetState {
-        if(!version?.major || version.major === 1)
-        {
-            if(typeof settings.buildCount === "string")
-            {
-                settings.buildCount = parseInt(settings.buildCount);
-            }
-            if(typeof settings.buildDefinition === "string")
-            {
-                settings.buildDefinition = parseInt(settings.buildDefinition);
-            }
-        }
+        WidgetConfigurationSettings.normalizeSettings(settings, version);
         return new ConfigurationWidgetState(settings.buildDefinition as number, settings.buildBranch, settings.defaultTag ?? "all",
             settings.buildCount as number, settings.showStages, settings.buildBranch === "", settings.matchAnyTag);
     }
@@ -134,17 +138,7 @@ export class WidgetState {
     }
 
     public static fromWidgetConfigurationSettings(settings: WidgetConfigurationSettings, version?: SemanticVersion) : WidgetState {
-        if(!version?.major || version.major === 1)
-        {
-            if(typeof settings.buildCount === "string")
-            {
-                settings.buildCount = parseInt(settings.buildCount);
-            }
-            if(typeof settings.buildDefinition === "string")
-            {
-                settings.buildDefinition = parseInt(settings.buildDefinition);
-            }
-        }
+        WidgetConfigurationSettings.normalizeSettings(settings, version);
         return new WidgetState(settings.definitionName, settings.buildDefinition, settings.buildBranch, settings.defaultTag ?? "all",
             settings.buildCount as number, settings.showStages, settings.matchAnyTag);
     }

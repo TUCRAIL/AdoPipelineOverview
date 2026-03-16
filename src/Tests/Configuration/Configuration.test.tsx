@@ -1,4 +1,4 @@
-import {filledWidgetConfiguration, resetMocks} from "../../__mocks__/Common";
+import {filledWidgetConfiguration, getWidgetSettings, resetMocks} from "../../__mocks__/Common";
 import {fireEvent, getByDisplayValue, getByText, render, screen, waitFor} from "@testing-library/react";
 import {ConfigurationWidget} from "../../configuration";
 import React from "react";
@@ -25,18 +25,7 @@ describe("Configuration", () => {
         )
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: null!
-            }
-        }
+        const args = getWidgetSettings();
         const widgetContext = new IWidgetConfigurationContext();
 
         // @ts-ignore
@@ -56,18 +45,7 @@ describe("Configuration", () => {
         )
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: null!
-            }
-        }
+        const args = getWidgetSettings();
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -88,18 +66,7 @@ describe("Configuration", () => {
         )
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(filledWidgetConfiguration)
-            }
-        }
+        const args = getWidgetSettings(filledWidgetConfiguration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -120,18 +87,7 @@ describe("Configuration", () => {
         )
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(filledWidgetConfiguration)
-            }
-        }
+        const args = getWidgetSettings(filledWidgetConfiguration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -161,18 +117,7 @@ describe("Configuration", () => {
 
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(configuration)
-            }
-        }
+        const args = getWidgetSettings(configuration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -204,18 +149,7 @@ describe("Configuration", () => {
 
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(configuration)
-            }
-        }
+        const args = getWidgetSettings(configuration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -249,18 +183,7 @@ describe("Configuration", () => {
 
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(configuration)
-            }
-        }
+        const args = getWidgetSettings(configuration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -291,18 +214,7 @@ describe("Configuration", () => {
 
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: null!
-            }
-        }
+        const args = getWidgetSettings();
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -354,18 +266,7 @@ describe("Configuration", () => {
 
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: null!
-            }
-        }
+        const args = getWidgetSettings();
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -401,18 +302,7 @@ describe("Configuration", () => {
 
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: null!
-            }
-        }
+        const args = getWidgetSettings();
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -448,18 +338,7 @@ describe("Configuration", () => {
 
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: null!
-            }
-        }
+        const args = getWidgetSettings();
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -497,18 +376,7 @@ describe("Configuration", () => {
         let configuration = filledWidgetConfiguration.clone();
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(filledWidgetConfiguration)
-            }
-        }
+        const args = getWidgetSettings(filledWidgetConfiguration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -558,18 +426,7 @@ describe("Configuration", () => {
         configuration.buildBranch = "";
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(configuration)
-            }
-        }
+        const args = getWidgetSettings(configuration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -616,18 +473,7 @@ describe("Configuration", () => {
         configuration.buildBranch = "master";
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(configuration)
-            }
-        }
+        const args = getWidgetSettings(configuration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -657,18 +503,7 @@ describe("Configuration", () => {
         )
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(filledWidgetConfiguration)
-            }
-        }
+        const args = getWidgetSettings(filledWidgetConfiguration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -708,18 +543,7 @@ describe("Configuration", () => {
         configuration.buildBranch = "refs/heads/master";
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(configuration)
-            }
-        }
+        const args = getWidgetSettings(configuration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([
@@ -754,18 +578,7 @@ describe("Configuration", () => {
         configuration.buildBranch = "refs/heads/master";
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(configuration)
-            }
-        }
+        const args = getWidgetSettings(configuration);
         const widgetContext = new IWidgetConfigurationContext();
 
         mockGetDefinitions.mockReturnValue([

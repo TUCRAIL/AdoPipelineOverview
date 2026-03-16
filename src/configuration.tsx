@@ -27,6 +27,7 @@ import {CommonServiceIds, IProjectPageService, getClient} from "@tucrail/azure-d
 import {TextField} from "azure-devops-ui/TextField";
 import {Checkbox} from "azure-devops-ui/Checkbox";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
+import {exportToJsonFile, getSelectionString, restoreSelection, stringsToItems} from "./Utils";
 import {ConfigurationWidgetState, IProps, WidgetConfigurationSettings} from "./State";
 import {showRootComponent} from "./Common";
 import {startsWith} from "azure-devops-ui/Core/Util/String";
@@ -98,24 +99,17 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         widgetSettings: WidgetSettings,
         widgetConfigurationContext: IWidgetConfigurationContext
     ): Promise<WidgetStatus> {
-        try {
-            this.widgetConfigurationContext = widgetConfigurationContext;
-            if (widgetSettings.customSettings.data) {
-                this.workingConfigurationData = widgetSettings.customSettings.data;
-                this.persistedConfigurationData = widgetSettings.customSettings.data;
-            }
-            await this.setStateFromWidgetSettings(widgetSettings);
-            return WidgetStatusHelper.Success();
-        } catch (e) {
-            console.error("Failed loading configuration: " + e)
-            return WidgetStatusHelper.Success((e as any).toString());
-            //return WidgetStatusHelper.Failure((e as any).toString());
-        }
+        this.widgetConfigurationContext = widgetConfigurationContext;
+        return this.handleSettings(widgetSettings, false);
     }
 
     async reload(
         widgetSettings: WidgetSettings
     ): Promise<WidgetStatus> {
+        return this.handleSettings(widgetSettings, true);
+    }
+
+    private async handleSettings(widgetSettings: WidgetSettings, isReload: boolean): Promise<WidgetStatus> {
         try {
             if (widgetSettings.customSettings.data) {
                 this.workingConfigurationData = widgetSettings.customSettings.data;
@@ -124,8 +118,11 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             await this.setStateFromWidgetSettings(widgetSettings);
             return WidgetStatusHelper.Success();
         } catch (e) {
-            console.error("Failed reloading configuration: " + e)
-            return WidgetStatusHelper.Failure((e as any).toString());
+            console.error(`Failed ${isReload ? "reloading" : "loading"} configuration: ` + e)
+            if (isReload) {
+                return WidgetStatusHelper.Failure((e as any).toString());
+            }
+            return WidgetStatusHelper.Success((e as any).toString());
         }
     }
 
@@ -178,45 +175,32 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
 
         console.info(`Starting to populate the branch dropdown. ${branchesArray.length} branches to add`);
 
-        branchesArray.forEach(branch => {
-            const newItem : IListBoxItem = {
-                id: branch,
-                text: branch.replace("refs/heads/", "")
-            }
-            this.branchItems.push(newItem);
-        });
+        this.branchItems = stringsToItems(branchesArray, b => b.replace("refs/heads/", ""));
 
-        if (buildBranch === "all") {
-            // Restore "Select All" state: disable all items so individual toggles are ignored
-            this.branchDropdownMultiSelection.addUnselectable(0, this.branchItems.length);
-            this.setState({ selectedBranches: "all" });
-        } else if (buildBranch !== "none" && buildBranch !== "") {
-            // Restore specific branch selections (supports comma-separated multi-branch or legacy single branch)
-            const savedBranches = buildBranch.split(",").map(b =>
-                b.trim().startsWith("refs/heads/") ? b.trim() : `refs/heads/${b.trim()}`);
-            let foundAny = false;
-            for (const savedBranch of savedBranches) {
-                const index = this.branchItems.findIndex((item) => item.id === savedBranch);
-                if (index !== -1) {
-                    foundAny = true;
-                    this.branchDropdownMultiSelection.select(index, undefined, true, true);
-                }
-            }
-            if (foundAny) {
-                this.setState({
-                    selectedBranches: savedBranches.filter(b =>
-                        this.branchItems.some(item => item.id === b)).join(",")
-                });
-            } else {
-                this.setState({ selectedBranches: "none" });
-            }
-        } else {
-            this.setState({ selectedBranches: "none" });
-        }
+        this.restoreBranchSelection(buildBranch);
 
         this.setState({
             isBranchDropdownDisabled: false
         });
+    }
+
+    private restoreBranchSelection(buildBranch: string) {
+        const idTransformer = (b: string) => b.trim().startsWith("refs/heads/") ? b.trim() : `refs/heads/${b.trim()}`;
+        const foundAny = restoreSelection(this.branchDropdownMultiSelection, this.branchItems, buildBranch, {
+            makeAllUnselectable: true,
+            idTransformer
+        });
+
+        if (buildBranch === "all") {
+            this.setState({ selectedBranches: "all" });
+        } else if (foundAny) {
+            this.setState({
+                selectedBranches: buildBranch.split(",").map(b => idTransformer(b))
+                    .filter(b => this.branchItems.some(item => item.id === b)).join(",")
+            });
+        } else {
+            this.setState({ selectedBranches: "none" });
+        }
     }
 
     /**
@@ -228,46 +212,17 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
         const tags = await buildClient.getTags(this.projectId);
 
         console.info(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
-        this.tagItems = [];
-        if (tags.length > 0) {
-            tags.sort().forEach(tag => {
-                const newItem : IListBoxItem = {
-                    id: tag,
-                    text: tag
-                };
+        this.tagItems = stringsToItems(tags);
 
-                this.tagItems.push(newItem);
-            });
-        }
-
-        let tagFound : boolean = false;
-
-        if(typeof this.state.selectedTag === "string" && this.state.selectedTag !== "all" && this.state.selectedTag !== "")
-        {
-            const tagArray = this.state.selectedTag.split(",");
-            for (const tag of tagArray) {
-                const index = this.tagItems.findIndex((item) => item.id === tag);
-                if (index !== -1) {
-                    tagFound = true;
-                    this.tagDropdownMultiSelection.select(index, undefined, true, true);
-                }
-            }
-            if(tagFound)
-            {
-                this.setState({
-                    selectedTag: this.state.selectedTag
-                });
-            }
-
-        }
-        if(!tagFound)
-        {
+        if (!restoreSelection(this.tagDropdownMultiSelection, this.tagItems, this.state.selectedTag)) {
             this.setState({
                 selectedTag: "all"
             });
+        } else {
+            this.setState({
+                selectedTag: this.state.selectedTag
+            });
         }
-
-
     }
 
     /**
@@ -311,32 +266,9 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     private async validateConfiguration() : Promise<SaveStatus>
     {
         try {
-            let branchName = this.state.selectedBranches;
-            if(branchName !== "all" && branchName !== "none" && branchName !== "") {
-                branchName = branchName.split(",")
-                    .map(b => b.trim().startsWith("refs/heads/") ? b.trim() : `refs/heads/${b.trim()}`)
-                    .join(",");
-            }
-            let configuration = ConfigurationWidgetState
-                .toWidgetConfigurationSettings(this.state, this.selectedBuildDefinition.value)
-            configuration.buildBranch = branchName;
-            let errorMessage = "";
-            if(configuration.buildDefinition === -1)
-            {
-                errorMessage += "The build definition selected is invalid \n";
-            }
-            if(configuration.buildBranch === "" || configuration.buildBranch === "none")
-            {
-                errorMessage += "At least one branch must be selected \n";
-            }
-            if(typeof configuration.buildCount === "string")
-            {
-                configuration.buildCount = parseInt(configuration.buildCount);
-            }
-            if(configuration.buildCount < 1 || configuration.buildCount > 50)
-            {
-                errorMessage += "The number of builds to show must be between 1 and 50 \n";
-            }
+            const configuration = this.prepareConfiguration();
+            const errorMessage = this.getValidationError(configuration);
+
             if(errorMessage !== "")
             {
                 console.error("Invalid configuration: \n" +
@@ -358,6 +290,37 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
             console.error(e);
             return WidgetConfigurationSave.Invalid();
         }
+    }
+
+    private prepareConfiguration(): WidgetConfigurationSettings {
+        let branchName = this.state.selectedBranches;
+        if(branchName !== "all" && branchName !== "none" && branchName !== "") {
+            branchName = branchName.split(",")
+                .map(b => b.trim().startsWith("refs/heads/") ? b.trim() : `refs/heads/${b.trim()}`)
+                .join(",");
+        }
+        let configuration = ConfigurationWidgetState
+            .toWidgetConfigurationSettings(this.state, this.selectedBuildDefinition.value)
+        configuration.buildBranch = branchName;
+        WidgetConfigurationSettings.normalizeSettings(configuration);
+        return configuration;
+    }
+
+    private getValidationError(configuration: WidgetConfigurationSettings): string {
+        let errorMessage = "";
+        if(configuration.buildDefinition === -1)
+        {
+            errorMessage += "The build definition selected is invalid \n";
+        }
+        if(configuration.buildBranch === "" || configuration.buildBranch === "none")
+        {
+            errorMessage += "At least one branch must be selected \n";
+        }
+        if((configuration.buildCount as number) < 1 || (configuration.buildCount as number) > 50)
+        {
+            errorMessage += "The number of builds to show must be between 1 and 50 \n";
+        }
+        return errorMessage;
     }
 
     //#endregion
@@ -429,18 +392,8 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      * @param _selectedDropdown
      */
     private onBranchDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
-        let newBranchState = "";
-        for(let i = 0; i < this.branchDropdownMultiSelection.value.length; i++) {
-            const selectionRange = this.branchDropdownMultiSelection.value[i];
-            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++) {
-                newBranchState += this.branchItems[j].id + ",";
-            }
-        }
-        if(newBranchState.endsWith(',')) {
-            newBranchState = newBranchState.substring(0, newBranchState.length - 1);
-        }
         this.setState({
-            selectedBranches: newBranchState === "" ? "none" : newBranchState
+            selectedBranches: getSelectionString(this.branchDropdownMultiSelection, this.branchItems, "none")
         });
     };
 
@@ -467,21 +420,8 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
      * @param _selectedDropdown
      */
     private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
-
-        let newTagState = "";
-        for(let i = 0;  i < this.tagDropdownMultiSelection.value.length;i++) {
-            const selectionRange = this.tagDropdownMultiSelection.value[i];
-            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++)
-            {
-                newTagState += this.tagItems[j].id + ",";
-            }
-        }
-        if(newTagState.endsWith(','))
-        {
-            newTagState = newTagState.substring(0, newTagState.length - 1);
-        }
         this.setState({
-            selectedTag:  newTagState === "" ? "all" : newTagState
+            selectedTag: getSelectionString(this.tagDropdownMultiSelection, this.tagItems)
         });
     }
 
@@ -500,28 +440,12 @@ export class ConfigurationWidget extends React.Component<IProps, ConfigurationWi
     }
 
     private onExportSavedConfig = () => {
-        const blob = new Blob([this.persistedConfigurationData], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "widget-configuration-saved.json";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        exportToJsonFile(this.persistedConfigurationData, "widget-configuration-saved.json");
         console.info("Saved configuration exported");
     };
 
     private onExportWorkingConfig = () => {
-        const blob = new Blob([this.workingConfigurationData], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "widget-configuration-working.json";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        exportToJsonFile(this.workingConfigurationData, "widget-configuration-working.json");
         console.info("Working configuration exported");
     };
 

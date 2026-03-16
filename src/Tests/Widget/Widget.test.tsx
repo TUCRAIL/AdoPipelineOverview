@@ -4,7 +4,7 @@ import React from "react";
 import {WidgetSettings} from "@tucrail/azure-devops-extension-api/Dashboard";
 import {mockGetProject, spyWidgetCallBackAccessor} from "../../__mocks__/azure-devops-extension-sdk";
 import {
-    filledWidgetConfiguration, resetMocks
+    filledWidgetConfiguration, getWidgetSettings, resetMocks
 } from "../../__mocks__/Common";
 import {BuildResult, createBuild, mockGetBuilds, mockGetTags} from "../../__mocks__/@tucrail/azure-devops-extension-api/Build";
 import {WidgetConfigurationSettings} from "../../State";
@@ -25,18 +25,7 @@ describe("Widget", () => {
         )
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: null!
-            }
-        }
+        const args = getWidgetSettings();
 
         // @ts-ignore
         const widget = spyWidgetCallBackAccessor as Widget;
@@ -56,18 +45,7 @@ describe("Widget", () => {
         )
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(filledWidgetConfiguration)
-            }
-        }
+        const args = getWidgetSettings(filledWidgetConfiguration);
 
         mockGetBuilds.mockReturnValue([
             createBuild(BuildResult.Succeeded)
@@ -91,18 +69,7 @@ describe("Widget", () => {
         )
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(filledWidgetConfiguration)
-            }
-        }
+        const args = getWidgetSettings(filledWidgetConfiguration);
 
         mockGetBuilds.mockReturnValue([
             createBuild(BuildResult.Succeeded)
@@ -138,18 +105,7 @@ describe("Widget", () => {
         let configuration = filledWidgetConfiguration;
         configuration.defaultTag = "tag1";
         configuration.matchAnyTag = matchAnyTag;
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(configuration)
-            }
-        }
+        const args = getWidgetSettings(configuration);
 
         mockGetBuilds.mockReturnValue([
             createBuild(BuildResult.Succeeded)
@@ -178,18 +134,7 @@ describe("Widget", () => {
         )
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(filledWidgetConfiguration)
-            }
-        }
+        const args = getWidgetSettings(filledWidgetConfiguration);
 
         mockGetBuilds.mockReturnValue([
             createBuild(BuildResult.Succeeded)
@@ -227,18 +172,7 @@ describe("Widget", () => {
         )
 
         await delay(1);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(filledWidgetConfiguration)
-            }
-        }
+        const args = getWidgetSettings(filledWidgetConfiguration);
 
         // @ts-ignore
         const widget = spyWidgetCallBackAccessor as Widget;
@@ -265,18 +199,7 @@ describe("Widget", () => {
         await delay(1);
         // Use a fresh configuration to avoid state pollution from earlier tests
         const configuration = new WidgetConfigurationSettings(1, buildBranch, "definitionName", 5, "all", false, false);
-        const args: WidgetSettings = {
-            name: "settings",
-            size: {
-                rowSpan: 3,
-                columnSpan: 3
-            },
-            lightboxOptions: undefined,
-            customSettings: {
-                version: undefined,
-                data: JSON.stringify(configuration)
-            }
-        }
+        const args = getWidgetSettings(configuration);
 
         // Ensure mockGetProject returns a valid project so that preload sets the correct projectId
         mockGetProject.mockReturnValue({ id: "buildClient", name: "buildClient" });
