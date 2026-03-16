@@ -20,6 +20,13 @@ import {Dropdown} from "azure-devops-ui/Dropdown";
 import {IListBoxItem} from "azure-devops-ui/ListBox";
 import {DropdownMultiSelection} from "azure-devops-ui/Utilities/DropdownSelection";
 import {
+    getBranchesToFetch,
+    getSelectionString,
+    getTagsToFetch,
+    restoreSelection,
+    stringsToItems
+} from "./Utils";
+import {
     IProps,
     WidgetConfigurationSettings,
     WidgetState
@@ -63,49 +70,44 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
     async load(
         widgetSettings: WidgetSettings
     ): Promise<WidgetStatus> {
-        try {
-            console.info("Loading widget data")
-            const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
-
-            if(settings === null || settings === undefined || typeof settings === "undefined")
-            {
-                console.warn("Widget settings are not configured. Please configure the widget");
-                this.setState(null);
-            }
-            else {
-                await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings,
-                    widgetSettings.customSettings.version));
-                await this.fillTagsDropDown();
-            }
-            return WidgetStatusHelper.Success();
-        } catch (e) {
-            console.error("Failed loading the widget data")
-            console.error(e)
-            return WidgetStatusHelper.Success();
-            //return WidgetStatusHelper.Failure((e as any).toString());
-        }
+        return this.handleSettings(widgetSettings, false);
     }
 
     //@ts-ignore
     async reload(
         widgetSettings: WidgetSettings
     ): Promise<WidgetStatus | undefined> {
+        return this.handleSettings(widgetSettings, true);
+    }
+
+    private async handleSettings(widgetSettings: WidgetSettings, isReload: boolean): Promise<WidgetStatus> {
         try {
-            console.info("Reloading widget data")
-            const settings = JSON.parse(widgetSettings.customSettings.data) as WidgetConfigurationSettings
-            if(settings === null || settings === undefined || typeof settings === "undefined")
+            console.info(`${isReload ? "Reloading" : "Loading"} widget data`)
+            const settingsData = widgetSettings.customSettings.data;
+
+            if(!settingsData)
             {
+                if (!isReload) {
+                    console.warn("Widget settings are not configured. Please configure the widget");
+                }
                 this.setState(null);
             }
             else {
+                const settings = JSON.parse(settingsData) as WidgetConfigurationSettings
                 await this.initializeState(WidgetState.fromWidgetConfigurationSettings(settings,
                     widgetSettings.customSettings.version));
+                if (!isReload) {
+                    await this.fillTagsDropDown();
+                }
             }
             return WidgetStatusHelper.Success();
         } catch (e) {
-            console.error("Failed reloading the widget data")
+            console.error(`Failed ${isReload ? "reloading" : "loading"} the widget data`)
             console.error(e)
-            return WidgetStatusHelper.Failure((e as any).toString());
+            if (isReload) {
+                return WidgetStatusHelper.Failure((e as any).toString());
+            }
+            return WidgetStatusHelper.Success();
         }
     }
 
@@ -119,7 +121,6 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
      * @private
      */
     private async initializeState(widgetState: WidgetState) {
-
         //Need to get empty object and copy because the widgetState could actually be of type ReadOnly<WidgetState>
         const settings = WidgetState.getEmptyObject();
         settings.copy(widgetState);
@@ -127,68 +128,61 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         console.info(`Initializing widget state for build definition ${settings.selectedBuildDefinitionId} on project ${this.projectId}`);
 
         const buildClient = getClient<BuildRestClient>(BuildRestClient);
-        let buildPages: Build[] = [];
-        const branches = settings.selectedBranches === 'all'
-            ? [undefined as (string | undefined)]
-            : settings.selectedBranches === 'none' || settings.selectedBranches === ''
-                ? []
-                : settings.selectedBranches.split(',').map(b => b.trim());
-        if(settings.matchAnyTagSelected)
-        {
-            for(const branch of branches) {
-                for(let tag of settings.selectedTag?.split(',') ?? []) {
-                    let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
-                        undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                        settings.selectedTag === 'all' ? undefined : [tag], undefined, settings.buildCount, undefined,
-                        undefined, undefined, BuildQueryOrder.StartTimeDescending, branch,
-                        undefined, undefined, undefined);
-                    buildPages = buildPages.concat(buildPage);
-                }
-            }
-        }
-        else {
-            for(const branch of branches) {
-                let buildPage = await buildClient.getBuilds(this.projectId, [settings.selectedBuildDefinitionId], undefined,
-                    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-                    settings.selectedTag === 'all' ? undefined : settings.selectedTag?.split(',') ?? [], undefined, settings.buildCount, undefined,
-                    undefined, undefined, BuildQueryOrder.StartTimeDescending, branch,
-                    undefined, undefined, undefined);
-                buildPages = buildPages.concat(buildPage);
-            }
-        }
-        buildPages = buildPages.filter((value, index, self) => self.indexOf(value) === index);
+        const branches = getBranchesToFetch(settings.selectedBranches);
+        const tagsToFetch = getTagsToFetch(settings.selectedTag);
 
+        let buildPages = await this.fetchBuilds(buildClient, settings, branches, tagsToFetch);
 
-        buildPages = buildPages.sort(function (a, b) {
-            return b.id - a.id;
-        });
+        buildPages = buildPages.filter((value, index, self) => self.indexOf(value) === index)
+            .sort((a, b) => b.id - a.id);
 
-
-        let builds: Build[];
-
-
-        builds = buildPages.map(buildPage => buildPage).slice(0, settings.buildCount);
-
+        const buildsToFetchTimelinesFor = buildPages.slice(0, settings.buildCount);
         console.info(`Found ${buildPages.length} builds matching criteria`);
 
-        this.builds = [];
+        this.builds = await this.fetchTimelinesForBuilds(buildClient, buildsToFetchTimelinesFor);
+        this.setState(settings);
+    }
+
+    private async fetchBuilds(buildClient: BuildRestClient, settings: WidgetState, branches: (string | undefined)[], tagsToFetch: (string | undefined)[]): Promise<Build[]> {
+        let buildPages: Build[] = [];
+        for (const branch of branches) {
+            if (settings.matchAnyTagSelected && settings.selectedTag !== 'all') {
+                for (const tag of tagsToFetch) {
+                    const builds = await this.getBuilds(buildClient, settings.selectedBuildDefinitionId, tag ? [tag] : undefined, branch, settings.buildCount as number);
+                    buildPages = buildPages.concat(builds);
+                }
+            } else {
+                const builds = await this.getBuilds(buildClient, settings.selectedBuildDefinitionId, tagsToFetch[0] === undefined ? undefined : tagsToFetch as string[], branch, settings.buildCount as number);
+                buildPages = buildPages.concat(builds);
+            }
+        }
+        return buildPages;
+    }
+
+    private async fetchTimelinesForBuilds(buildClient: BuildRestClient, builds: Build[]): Promise<BuildWithTimeline[]> {
         const tempBuilds: BuildWithTimeline[] = [];
         for (let build of builds) {
             const timeline = await buildClient.getBuildTimeline(this.projectId, build.id);
             const newBuild = new BuildWithTimeline(build, timeline);
-            newBuild.timeline.records = newBuild.timeline.records.filter(this.filterTimelineByStage).sort(function (a, b) {
-                return a.order - b.order;
-            });
+            newBuild.timeline.records = newBuild.timeline.records
+                .filter(this.filterTimelineByStage)
+                .sort((a, b) => a.order - b.order);
             tempBuilds.push(newBuild);
         }
-
-        this.builds = tempBuilds;
-        this.setState(settings);
+        return tempBuilds;
     }
 
     //#endregion
 
     //#region helpers
+
+    private async getBuilds(buildClient: BuildRestClient, definitionId: number, tags: string[] | undefined, branch: string | undefined, buildCount: number): Promise<Build[]> {
+        return await buildClient.getBuilds(this.projectId, [definitionId], undefined,
+            undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+            tags, undefined, buildCount, undefined,
+            undefined, undefined, BuildQueryOrder.StartTimeDescending, branch,
+            undefined, undefined, undefined);
+    }
 
     /**
      * Checks if the timeline record is a stage
@@ -209,35 +203,16 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
         const tags = await buildClient.getTags(this.projectId);
 
         console.info(`Starting to populate the tag dropdown. ${tags.length} tags to add`);
-        this.tagItems = [];
-        if (tags.length > 0) {
-            tags.sort().forEach(tag => {
-                const newItem : IListBoxItem = {
-                    id: tag,
-                    text: tag
-                };
+        this.tagItems = stringsToItems(tags);
 
-                this.tagItems.push(newItem);
-            });
-        }
-
-        if(this.state.selectedTag !== "all" && this.state.selectedTag !== "")
-        {
-            const tagArray = this.state.selectedTag?.split(",") ?? [];
-            for (const tag of tagArray) {
-                const index = this.tagItems.findIndex((item) => item.id === tag);
-                if (index !== -1) {
-                    this.tagDropdownMultiSelection.select(index, undefined, true, true);
-                }
-            }
-            this.setState({
-                selectedTag: this.state.selectedTag
-            })
-        }
-        else {
+        if (!restoreSelection(this.tagDropdownMultiSelection, this.tagItems, this.state.selectedTag)) {
             this.setState({
                 selectedTag: "all"
             });
+        } else {
+            this.setState({
+                selectedTag: this.state.selectedTag
+            })
         }
     }
 
@@ -246,21 +221,8 @@ export class Widget extends React.Component<IProps, WidgetState> implements ICon
     //#region Event handlers
 
     private onTagDropdownChange = (_event: React.SyntheticEvent<HTMLElement>, _selectedDropdown: IListBoxItem) => {
-
-        let newTagState = "";
-        for(let i = 0;  i < this.tagDropdownMultiSelection.value.length;i++) {
-            const selectionRange = this.tagDropdownMultiSelection.value[i];
-            for(let j = selectionRange.beginIndex; j <= selectionRange.endIndex; j++)
-            {
-                newTagState += this.tagItems[j].id + ",";
-            }
-        }
-        if(newTagState.endsWith(','))
-        {
-            newTagState = newTagState.substring(0, newTagState.length - 1);
-        }
         this.setState({
-            selectedTag:  newTagState === "" ? "all" : newTagState
+            selectedTag: getSelectionString(this.tagDropdownMultiSelection, this.tagItems)
         }, async () => {
             await this.initializeState(this.state);
         });
